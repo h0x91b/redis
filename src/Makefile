@@ -94,7 +94,10 @@ ifeq ($(MALLOC),jemalloc)
 	FINAL_LIBS+= ../deps/jemalloc/lib/libjemalloc.a -ldl
 endif
 
+FINAL_LIBS+=v8.o
+
 REDIS_CC=$(QUIET_CC)$(CC) $(FINAL_CFLAGS)
+REDIS_CCX=$(QUIET_CC)$(CC) $(FINAL_LDFLAGS)
 REDIS_LD=$(QUIET_LINK)$(CC) $(FINAL_LDFLAGS)
 REDIS_INSTALL=$(QUIET_INSTALL)$(INSTALL)
 
@@ -123,7 +126,7 @@ REDIS_CHECK_DUMP_OBJ=redis-check-dump.o lzf_c.o lzf_d.o crc64.o
 REDIS_CHECK_AOF_NAME=redis-check-aof
 REDIS_CHECK_AOF_OBJ=redis-check-aof.o
 
-all: $(REDIS_SERVER_NAME) $(REDIS_SENTINEL_NAME) $(REDIS_CLI_NAME) $(REDIS_BENCHMARK_NAME) $(REDIS_CHECK_DUMP_NAME) $(REDIS_CHECK_AOF_NAME)
+all: v8 $(REDIS_SERVER_NAME) $(REDIS_SENTINEL_NAME) $(REDIS_CLI_NAME) $(REDIS_BENCHMARK_NAME) $(REDIS_CHECK_DUMP_NAME) $(REDIS_CHECK_AOF_NAME)
 	@echo ""
 	@echo "Hint: It's a good idea to run 'make test' ;)"
 	@echo ""
@@ -165,6 +168,10 @@ endif
 ifneq ($(strip $(PREV_FINAL_LDFLAGS)), $(strip $(FINAL_LDFLAGS)))
 .make-prerequisites: persist-settings
 endif
+
+#v8 object
+v8:
+	$(REDIS_CCX) -I../deps/hiredis -I../deps/linenoise -I../deps/lua/src -I../deps/v8/include/ -o v8.o -c v8.cpp -I../deps/v8/include/ 
 
 # redis-server
 $(REDIS_SERVER_NAME): $(REDIS_SERVER_OBJ)
