@@ -1573,8 +1573,8 @@ int getClientTypeByName(char *name) {
     else return -1;
 }
 
-char *getClientTypeName(int class) {
-    switch(class) {
+char *getClientTypeName(int _class) {
+    switch(_class) {
     case REDIS_CLIENT_TYPE_NORMAL: return "normal";
     case REDIS_CLIENT_TYPE_SLAVE:  return "slave";
     case REDIS_CLIENT_TYPE_PUBSUB: return "pubsub";
