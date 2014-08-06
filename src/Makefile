@@ -54,6 +54,12 @@ FINAL_LDFLAGS=$(LDFLAGS) $(REDIS_LDFLAGS) $(DEBUG)
 FINAL_LIBS=-lm
 DEBUG=-g -ggdb
 
+V8_LIBS=../deps/v8/out/x64.release/libv8_{base,libbase,snapshot}.a
+V8_LIBS+= ../deps/v8/out/x64.release/libicu{uc,data,i18n}.a
+V8_LIBS+= -lpthread -stdlib=libstdc++ -lstdc++
+
+FINAL_LIBS+=$(V8_LIBS)
+
 ifeq ($(uname_S),SunOS)
 	# SunOS
 	INSTALL=cp -pf
@@ -93,8 +99,6 @@ ifeq ($(MALLOC),jemalloc)
 	FINAL_CFLAGS+= -DUSE_JEMALLOC -I../deps/jemalloc/include
 	FINAL_LIBS+= ../deps/jemalloc/lib/libjemalloc.a -ldl
 endif
-
-FINAL_LIBS+=v8.o
 
 REDIS_CC=$(QUIET_CC)$(CC) $(FINAL_CFLAGS)
 REDIS_CCX=$(QUIET_CC)$(CC) $(FINAL_LDFLAGS)
@@ -171,11 +175,11 @@ endif
 
 #v8 object
 v8:
-	$(REDIS_CCX) -I../deps/hiredis -I../deps/linenoise -I../deps/lua/src -I../deps/v8/include/ -o v8.o -c v8.cpp -I../deps/v8/include/ 
+	$(REDIS_CCX) -I../deps/hiredis -I../deps/linenoise -I../deps/lua/src -I../deps/v8/include/ -o v8.o -c v8.cpp -I../deps/v8/include/
 
 # redis-server
 $(REDIS_SERVER_NAME): $(REDIS_SERVER_OBJ)
-	$(REDIS_LD) -o $@ $^ ../deps/hiredis/libhiredis.a ../deps/lua/src/liblua.a $(FINAL_LIBS)
+	$(REDIS_LD) -o $@ $^ ../deps/hiredis/libhiredis.a ../deps/lua/src/liblua.a $(FINAL_LIBS) v8.o
 
 # redis-sentinel
 $(REDIS_SENTINEL_NAME): $(REDIS_SERVER_NAME)

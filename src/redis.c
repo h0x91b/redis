@@ -3628,6 +3628,7 @@ int main(int argc, char **argv) {
     }
 
     aeSetBeforeSleepProc(server.el,beforeSleep);
+    initV8();
     aeMain(server.el);
     aeDeleteEventLoop(server.el);
     return 0;
