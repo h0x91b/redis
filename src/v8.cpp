@@ -11,6 +11,12 @@ Isolate *isolate = NULL;
 Persistent<ObjectTemplate> _global;
 Persistent<Context> persistent_v8_context;
 
+void APICall(const v8::FunctionCallbackInfo<v8::Value>& args) {
+	redisLog(REDIS_NOTICE,"APICall %d arguments", args.Length());
+	
+	
+}
+
 int v8_init() {
 	redisLog(REDIS_NOTICE,"v8_init");
 	isolate = Isolate::New();
@@ -18,6 +24,13 @@ int v8_init() {
 	HandleScope handle_scope(isolate);
 	_global.Reset(isolate, ObjectTemplate::New());
 	Local<ObjectTemplate> global = Local<ObjectTemplate>::New(isolate, _global);
+	
+	global->Set(String::NewFromUtf8(isolate, "hello"), String::NewFromUtf8(isolate, "world"));
+	
+	Local<ObjectTemplate> Redis = ObjectTemplate::New(isolate);
+	Redis->Set(String::NewFromUtf8(isolate, "call"), FunctionTemplate::New(isolate, APICall));
+	global->Set(String::NewFromUtf8(isolate, "Redis"), Redis);
+	
 	Handle<Context> v8_context = Context::New(isolate,NULL,global);
 	persistent_v8_context.Reset(isolate, v8_context);
 	
@@ -31,6 +44,7 @@ void jsCommand(redisClient *c) {
 	HandleScope handle_scope(isolate);
 	
 	Local<ObjectTemplate> global = Local<ObjectTemplate>::New(isolate, _global);
+	
 	Handle<Context> v8_context = Context::New(isolate,NULL,global);
 	//persistent context, if need...
 	//Local<Context> v8_context = Local<Context>::New(isolate, persistent_v8_context);
@@ -60,10 +74,13 @@ void jsCommand(redisClient *c) {
 		return;
 	}
 	
+	Local<Object> obj = Object::New(isolate);
+	obj->Set(String::NewFromUtf8(isolate, "rez"), result);
+	
 	//stringify result
 	Local<Object> JSON = Local<Object>::Cast(window->Get(String::NewFromUtf8(isolate, "JSON")));
 	Local<Function> stringify = Local<Function>::Cast(JSON->Get(String::NewFromUtf8(isolate, "stringify")));
-	Local<Value> args2[] = { result };
+	Local<Value> args2[] = { obj };
 	Local<String> res = Local<String>::Cast(stringify->Call(JSON, 1, args2));
 	String::Utf8Value resStr(res);
 	
