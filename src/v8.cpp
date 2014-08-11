@@ -36,17 +36,22 @@ void jsCommand(redisClient *c) {
 	//Local<Context> v8_context = Local<Context>::New(isolate, persistent_v8_context);
 	Context::Scope context_scope(v8_context);
 	Handle<String> source = String::NewFromUtf8(isolate, (const char *)c->argv[1]->ptr);
+	
+	Local<Object> window = isolate->GetCurrentContext()->Global();
+	Local<Function> jsFunction = Local<Function>::Cast(window->Get(String::NewFromUtf8(isolate, "Function")));
+	Local<Value> args[] = { String::NewFromUtf8(isolate, (const char *)c->argv[1]->ptr) };
 	TryCatch trycatch;
-	Handle<Script> script = Script::Compile(source, String::NewFromUtf8(isolate, "<redis>"));
-	if(script.IsEmpty()){
+	Local<Function> tmpFunc = Local<Function>::Cast(jsFunction->Call(window, 1, args));
+	if(tmpFunc.IsEmpty()) {
 		Handle<Value> exception = trycatch.Exception();
 		String::Utf8Value exception_str(exception);
-		redisLog(REDIS_NOTICE, "Exception while compile script: %s", *exception_str);
+		redisLog(REDIS_NOTICE, "Exception while compiling script: %s", *exception_str);
 		addReplyError(c,*exception_str);
 		return;
 	}
 	redisLog(REDIS_NOTICE,"Compiled");
-	Local<Value> result = script->Run();
+	Local<Value> result = tmpFunc->Call(window, 0, 0);
+	
 	if(result.IsEmpty()) {
 		Handle<Value> exception = trycatch.Exception();
 		String::Utf8Value exception_str(exception);
@@ -56,11 +61,10 @@ void jsCommand(redisClient *c) {
 	}
 	
 	//stringify result
-	Local<Object> window = isolate->GetCurrentContext()->Global();
 	Local<Object> JSON = Local<Object>::Cast(window->Get(String::NewFromUtf8(isolate, "JSON")));
 	Local<Function> stringify = Local<Function>::Cast(JSON->Get(String::NewFromUtf8(isolate, "stringify")));
-	Local<Value> args[] = { result };
-	Local<String> res = Local<String>::Cast(stringify->Call(JSON, 1, args));
+	Local<Value> args2[] = { result };
+	Local<String> res = Local<String>::Cast(stringify->Call(JSON, 1, args2));
 	String::Utf8Value resStr(res);
 	
 	redisLog(REDIS_NOTICE, "Script execution result: %s", *resStr);
