@@ -54,9 +54,16 @@ void jsCommand(redisClient *c) {
 		addReplyError(c,*exception_str);
 		return;
 	}
-	String::Utf8Value resStr(result);
-	redisLog(REDIS_NOTICE, "Script execution result: %s", *resStr);
 	
+	//stringify result
+	Local<Object> window = isolate->GetCurrentContext()->Global();
+	Local<Object> JSON = Local<Object>::Cast(window->Get(String::NewFromUtf8(isolate, "JSON")));
+	Local<Function> stringify = Local<Function>::Cast(JSON->Get(String::NewFromUtf8(isolate, "stringify")));
+	Local<Value> args[] = { result };
+	Local<String> res = Local<String>::Cast(stringify->Call(JSON, 1, args));
+	String::Utf8Value resStr(res);
+	
+	redisLog(REDIS_NOTICE, "Script execution result: %s", *resStr);
 	addReplyBulkCString(c,*resStr);
 	return;
 }
