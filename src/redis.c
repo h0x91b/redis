@@ -1457,6 +1457,7 @@ void initServerConfig(void) {
     server.lua_caller = NULL;
     server.lua_time_limit = REDIS_LUA_TIME_LIMIT;
     server.lua_client = NULL;
+	server.js_client = NULL;
     server.lua_timedout = 0;
     server.migrate_cached_sockets = dictCreate(&migrateCacheDictType,NULL);
     server.next_client_id = 1; /* Client IDs, start from 1 .*/

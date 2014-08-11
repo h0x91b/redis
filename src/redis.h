@@ -861,6 +861,7 @@ struct redisServer {
     int cluster_require_full_coverage; /* If true, put the cluster down if
                                           there is at least an uncovered slot. */
     /* Scripting */
+    redisClient *js_client;   /* The "fake client" to query Redis from Lua */
     lua_State *lua; /* The Lua interpreter. We use just one for all clients */
     redisClient *lua_client;   /* The "fake client" to query Redis from Lua */
     redisClient *lua_caller;   /* The client running EVAL right now, or NULL */

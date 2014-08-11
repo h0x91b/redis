@@ -14,7 +14,54 @@ Persistent<Context> persistent_v8_context;
 void APICall(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	redisLog(REDIS_NOTICE,"APICall %d arguments", args.Length());
 	
+	struct redisCommand *cmd;
+	redisClient *c = server.js_client;
+	sds reply;
+	int argc = args.Length();
+	static robj **argv = NULL;
+	static int argv_size = 0;
 	
+	argv = (robj**)zmalloc(sizeof(robj*)*argc);
+	HandleScope handle_scope(isolate);
+	for (int i = 0; i < args.Length(); i++) {
+		v8::String::Utf8Value str(args[i]);
+		argv[i] = createStringObject((char*)*str,str.length());
+	}
+	
+	c->argv = argv;
+	c->argc = argc;
+	
+	cmd = lookupCommandByCString((sds)argv[0]->ptr);
+	if(!cmd) {
+		
+	}
+	
+	c->cmd = cmd;
+	call(c,REDIS_CALL_SLOWLOG | REDIS_CALL_STATS);
+	
+	reply = sdsempty();
+	if (c->bufpos) {
+		reply = sdscatlen(reply,c->buf,c->bufpos);
+		c->bufpos = 0;
+	}
+
+	while(listLength(c->reply)) {
+		robj *o = (robj*)listNodeValue(listFirst(c->reply));
+		reply = sdscatlen(reply,o->ptr,strlen((const char*)o->ptr));
+		listDelNode(c->reply,listFirst(c->reply));
+	}
+
+	Handle<Value> ret_value = String::NewFromUtf8(isolate, reply);//parse_response();
+	Local<String> v8reply = String::NewFromUtf8(isolate, reply);
+
+	sdsfree(reply);
+	c->reply_bytes = 0;
+
+	for (int j = 0; j < c->argc; j++)
+		decrRefCount(c->argv[j]);
+	zfree(c->argv);
+
+	args.GetReturnValue().Set(ret_value);
 }
 
 int v8_init() {
@@ -33,6 +80,11 @@ int v8_init() {
 	
 	Handle<Context> v8_context = Context::New(isolate,NULL,global);
 	persistent_v8_context.Reset(isolate, v8_context);
+	
+	if(server.js_client == NULL) {
+		server.js_client = createClient(-1);
+		server.js_client->flags |= REDIS_LUA_CLIENT;
+	}
 	
 	redisLog(REDIS_NOTICE,"v8_init done");
 	return 0;
