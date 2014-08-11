@@ -1,5 +1,5 @@
 #include <v8.h>
-#include <string.h>
+#include <hiredis.h>
 
 using namespace v8;
 
@@ -10,6 +10,30 @@ extern "C" {
 Isolate *isolate = NULL;
 Persistent<ObjectTemplate> _global;
 Persistent<Context> persistent_v8_context;
+
+Handle<Value> parseResponse(redisReply *rReply) {
+	Local<Array> arr;
+	switch(rReply->type) {
+		case REDIS_REPLY_STATUS:
+		case REDIS_REPLY_STRING:
+			return String::NewFromUtf8(isolate, rReply->str, String::kNormalString, rReply->len);//parse_response();
+		case REDIS_REPLY_INTEGER:
+			return Integer::New(isolate, rReply->integer);//parse_response();
+		case REDIS_REPLY_ERROR:
+			isolate->ThrowException(String::NewFromUtf8(isolate, rReply->str, String::kNormalString, rReply->len));
+			return Undefined(isolate);
+		case REDIS_REPLY_ARRAY:
+			arr = Array::New(isolate);
+			for(int n=0;n<rReply->elements;n++) {
+				arr->Set(Integer::New(isolate, n), parseResponse(rReply->element[n]));
+			}
+			return arr;
+		default:
+			isolate->ThrowException(String::NewFromUtf8(isolate, "Unknown reply type"));
+			printf("Unknown reply type: %d\n", rReply->type);
+			return Undefined(isolate);
+	}
+}
 
 void APICall(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	redisLog(REDIS_NOTICE,"APICall %d arguments", args.Length());
@@ -50,8 +74,13 @@ void APICall(const v8::FunctionCallbackInfo<v8::Value>& args) {
 		reply = sdscatlen(reply,o->ptr,strlen((const char*)o->ptr));
 		listDelNode(c->reply,listFirst(c->reply));
 	}
-
-	Handle<Value> ret_value = String::NewFromUtf8(isolate, reply);//parse_response();
+	
+	redisReader *rr = redisReaderCreate();
+	redisReaderFeed(rr, reply, sdslen(reply));
+	void *aux = NULL;
+	redisReaderGetReply(rr, &aux);
+	redisReply *rReply = (redisReply*)aux;
+	Handle<Value> ret_value = parseResponse(rReply);
 	Local<String> v8reply = String::NewFromUtf8(isolate, reply);
 
 	sdsfree(reply);
@@ -62,6 +91,9 @@ void APICall(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	zfree(c->argv);
 
 	args.GetReturnValue().Set(ret_value);
+	
+	freeReplyObject(aux);
+	redisReaderFree(rr);
 }
 
 int v8_init() {
