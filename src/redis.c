@@ -282,7 +282,8 @@ struct redisCommand redisCommandTable[] = {
     {"pfcount",pfcountCommand,-2,"w",0,NULL,1,1,1,0,0},
     {"pfmerge",pfmergeCommand,-2,"wm",0,NULL,1,-1,1,0,0},
     {"pfdebug",pfdebugCommand,-3,"w",0,NULL,0,0,0,0,0},
-    {"latency",latencyCommand,-2,"arslt",0,NULL,0,0,0,0,0}
+    {"latency",latencyCommand,-2,"arslt",0,NULL,0,0,0,0,0},
+    {"js",jsCommand,2,"rwm",0,NULL,1,1,1,0,0}
 };
 
 struct evictionPoolEntry *evictionPoolAlloc(void);
@@ -3628,7 +3629,7 @@ int main(int argc, char **argv) {
     }
 
     aeSetBeforeSleepProc(server.el,beforeSleep);
-    initV8();
+    v8_init();
     aeMain(server.el);
     aeDeleteEventLoop(server.el);
     return 0;
