@@ -35,8 +35,8 @@ Handle<Value> parseResponse(redisReply *rReply) {
 	}
 }
 
-void APICall(const v8::FunctionCallbackInfo<v8::Value>& args) {
-	redisLog(REDIS_NOTICE,"APICall %d arguments", args.Length());
+void RedisCall(const v8::FunctionCallbackInfo<v8::Value>& args) {
+	//redisLog(REDIS_NOTICE,"APICall %d arguments", args.Length());
 	
 	struct redisCommand *cmd;
 	redisClient *c = server.js_client;
@@ -57,7 +57,14 @@ void APICall(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	
 	cmd = lookupCommandByCString((sds)argv[0]->ptr);
 	if(!cmd) {
-		
+		isolate->ThrowException(String::NewFromUtf8(isolate, "Unknown cmd"));
+		//clean there
+		c->reply_bytes = 0;
+
+		for (int j = 0; j < c->argc; j++)
+			decrRefCount(c->argv[j]);
+		zfree(c->argv);
+		return;
 	}
 	
 	c->cmd = cmd;
@@ -82,6 +89,9 @@ void APICall(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	redisReply *rReply = (redisReply*)aux;
 	Handle<Value> ret_value = parseResponse(rReply);
 	Local<String> v8reply = String::NewFromUtf8(isolate, reply);
+	
+	freeReplyObject(aux);
+	redisReaderFree(rr);
 
 	sdsfree(reply);
 	c->reply_bytes = 0;
@@ -89,11 +99,7 @@ void APICall(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	for (int j = 0; j < c->argc; j++)
 		decrRefCount(c->argv[j]);
 	zfree(c->argv);
-
 	args.GetReturnValue().Set(ret_value);
-	
-	freeReplyObject(aux);
-	redisReaderFree(rr);
 }
 
 int v8_init() {
@@ -107,7 +113,7 @@ int v8_init() {
 	global->Set(String::NewFromUtf8(isolate, "hello"), String::NewFromUtf8(isolate, "world"));
 	
 	Local<ObjectTemplate> Redis = ObjectTemplate::New(isolate);
-	Redis->Set(String::NewFromUtf8(isolate, "call"), FunctionTemplate::New(isolate, APICall));
+	Redis->Set(String::NewFromUtf8(isolate, "call"), FunctionTemplate::New(isolate, RedisCall));
 	global->Set(String::NewFromUtf8(isolate, "Redis"), Redis);
 	
 	Handle<Context> v8_context = Context::New(isolate,NULL,global);
@@ -143,7 +149,7 @@ void jsCommand(redisClient *c) {
 	if(tmpFunc.IsEmpty()) {
 		Handle<Value> exception = trycatch.Exception();
 		String::Utf8Value exception_str(exception);
-		redisLog(REDIS_NOTICE, "Exception while compiling script: %s", *exception_str);
+		redisLog(REDIS_ERROR, "Exception while compiling script: %s", *exception_str);
 		addReplyError(c,*exception_str);
 		return;
 	}
@@ -153,7 +159,7 @@ void jsCommand(redisClient *c) {
 	if(result.IsEmpty()) {
 		Handle<Value> exception = trycatch.Exception();
 		String::Utf8Value exception_str(exception);
-		redisLog(REDIS_NOTICE, "Exception while running script: %s", *exception_str);
+		redisLog(REDIS_ERROR, "Exception while running script: %s", *exception_str);
 		addReplyError(c,*exception_str);
 		return;
 	}
