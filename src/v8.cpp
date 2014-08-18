@@ -56,8 +56,8 @@ void RedisCall(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	c->argc = argc;
 	
 	cmd = lookupCommandByCString((sds)argv[0]->ptr);
-	if(!cmd) {
-		isolate->ThrowException(String::NewFromUtf8(isolate, "Unknown cmd"));
+	if(!cmd || ((cmd->arity > 0 && cmd->arity != argc) || (argc < -cmd->arity))) {
+		isolate->ThrowException(String::NewFromUtf8(isolate, "Unknown cmd or wrong number of arguments"));
 		//clean there
 		c->reply_bytes = 0;
 
