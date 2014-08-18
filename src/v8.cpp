@@ -167,13 +167,13 @@ void v8_run_js(redisClient *c, bool isolated) {
 	}
 	
 	Local<Object> obj = Object::New(isolate);
-	obj->Set(String::NewFromUtf8(isolate, "rez"), result);
+	obj->Set(String::NewFromUtf8(isolate, "r"), result);
 	
 	//stringify result
 	Local<Object> JSON = Local<Object>::Cast(window->Get(String::NewFromUtf8(isolate, "JSON")));
 	Local<Function> stringify = Local<Function>::Cast(JSON->Get(String::NewFromUtf8(isolate, "stringify")));
-	Local<Value> args2[] = { obj };
-	Local<String> res = Local<String>::Cast(stringify->Call(JSON, 1, args2));
+	Local<Value> args2[] = { obj, Null(isolate), String::NewFromUtf8(isolate, "\t") };
+	Local<String> res = Local<String>::Cast(stringify->Call(JSON, 3, args2));
 	String::Utf8Value resStr(res);
 	
 	redisLog(REDIS_NOTICE, "Script execution result: %s", *resStr);
