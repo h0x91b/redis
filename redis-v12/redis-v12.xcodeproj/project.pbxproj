@@ -1,0 +1,296 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A4A48FE419A2452F00B67BB8 /* adlist.c in Sources */ = {isa = PBXBuildFile; fileRef = A4A48FD119A2452F00B67BB8 /* adlist.c */; };
+		A4A48FE919A2452F00B67BB8 /* ae.c in Sources */ = {isa = PBXBuildFile; fileRef = A4A48FD719A2452F00B67BB8 /* ae.c */; };
+		A4A48FEA19A2452F00B67BB8 /* anet.c in Sources */ = {isa = PBXBuildFile; fileRef = A4A48FD919A2452F00B67BB8 /* anet.c */; };
+		A4A48FEB19A2452F00B67BB8 /* crc64.c in Sources */ = {isa = PBXBuildFile; fileRef = A4A48FDB19A2452F00B67BB8 /* crc64.c */; };
+		A4A48FEC19A2452F00B67BB8 /* redis-cli.c in Sources */ = {isa = PBXBuildFile; fileRef = A4A48FDD19A2452F00B67BB8 /* redis-cli.c */; };
+		A4A48FED19A2452F00B67BB8 /* release.c in Sources */ = {isa = PBXBuildFile; fileRef = A4A48FDE19A2452F00B67BB8 /* release.c */; };
+		A4A48FEE19A2452F00B67BB8 /* sds.c in Sources */ = {isa = PBXBuildFile; fileRef = A4A48FE019A2452F00B67BB8 /* sds.c */; };
+		A4A48FEF19A2452F00B67BB8 /* zmalloc.c in Sources */ = {isa = PBXBuildFile; fileRef = A4A48FE219A2452F00B67BB8 /* zmalloc.c */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		A4A48FC619A244BA00B67BB8 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		A4A48FC819A244BA00B67BB8 /* redis-cli */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "redis-cli"; sourceTree = BUILT_PRODUCTS_DIR; };
+		A4A48FD119A2452F00B67BB8 /* adlist.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = adlist.c; path = ../../src/adlist.c; sourceTree = "<group>"; };
+		A4A48FD219A2452F00B67BB8 /* adlist.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = adlist.h; path = ../../src/adlist.h; sourceTree = "<group>"; };
+		A4A48FD719A2452F00B67BB8 /* ae.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = ae.c; path = ../../src/ae.c; sourceTree = "<group>"; };
+		A4A48FD819A2452F00B67BB8 /* ae.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ae.h; path = ../../src/ae.h; sourceTree = "<group>"; };
+		A4A48FD919A2452F00B67BB8 /* anet.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = anet.c; path = ../../src/anet.c; sourceTree = "<group>"; };
+		A4A48FDA19A2452F00B67BB8 /* anet.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = anet.h; path = ../../src/anet.h; sourceTree = "<group>"; };
+		A4A48FDB19A2452F00B67BB8 /* crc64.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = crc64.c; path = ../../src/crc64.c; sourceTree = "<group>"; };
+		A4A48FDC19A2452F00B67BB8 /* crc64.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = crc64.h; path = ../../src/crc64.h; sourceTree = "<group>"; };
+		A4A48FDD19A2452F00B67BB8 /* redis-cli.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = "redis-cli.c"; path = "../../src/redis-cli.c"; sourceTree = "<group>"; };
+		A4A48FDE19A2452F00B67BB8 /* release.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = release.c; path = ../../src/release.c; sourceTree = "<group>"; };
+		A4A48FDF19A2452F00B67BB8 /* release.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = release.h; path = ../../src/release.h; sourceTree = "<group>"; };
+		A4A48FE019A2452F00B67BB8 /* sds.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = sds.c; path = ../../src/sds.c; sourceTree = "<group>"; };
+		A4A48FE119A2452F00B67BB8 /* sds.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sds.h; path = ../../src/sds.h; sourceTree = "<group>"; };
+		A4A48FE219A2452F00B67BB8 /* zmalloc.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = zmalloc.c; path = ../../src/zmalloc.c; sourceTree = "<group>"; };
+		A4A48FE319A2452F00B67BB8 /* zmalloc.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = zmalloc.h; path = ../../src/zmalloc.h; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A4A48FC519A244BA00B67BB8 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A43AE2DC19A2432500FFE199 = {
+			isa = PBXGroup;
+			children = (
+				A4A48FC919A244BA00B67BB8 /* redis-cli */,
+				A43AE2E619A2432500FFE199 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A43AE2E619A2432500FFE199 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A4A48FC819A244BA00B67BB8 /* redis-cli */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A4A48FC919A244BA00B67BB8 /* redis-cli */ = {
+			isa = PBXGroup;
+			children = (
+				A4A48FD119A2452F00B67BB8 /* adlist.c */,
+				A4A48FD219A2452F00B67BB8 /* adlist.h */,
+				A4A48FD719A2452F00B67BB8 /* ae.c */,
+				A4A48FD819A2452F00B67BB8 /* ae.h */,
+				A4A48FD919A2452F00B67BB8 /* anet.c */,
+				A4A48FDA19A2452F00B67BB8 /* anet.h */,
+				A4A48FDB19A2452F00B67BB8 /* crc64.c */,
+				A4A48FDC19A2452F00B67BB8 /* crc64.h */,
+				A4A48FDD19A2452F00B67BB8 /* redis-cli.c */,
+				A4A48FDE19A2452F00B67BB8 /* release.c */,
+				A4A48FDF19A2452F00B67BB8 /* release.h */,
+				A4A48FE019A2452F00B67BB8 /* sds.c */,
+				A4A48FE119A2452F00B67BB8 /* sds.h */,
+				A4A48FE219A2452F00B67BB8 /* zmalloc.c */,
+				A4A48FE319A2452F00B67BB8 /* zmalloc.h */,
+			);
+			path = "redis-cli";
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A4A48FC719A244BA00B67BB8 /* redis-cli */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A4A48FCE19A244BA00B67BB8 /* Build configuration list for PBXNativeTarget "redis-cli" */;
+			buildPhases = (
+				A4A48FC419A244BA00B67BB8 /* Sources */,
+				A4A48FC519A244BA00B67BB8 /* Frameworks */,
+				A4A48FC619A244BA00B67BB8 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "redis-cli";
+			productName = "redis-cli";
+			productReference = A4A48FC819A244BA00B67BB8 /* redis-cli */;
+			productType = "com.apple.product-type.tool";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A43AE2DD19A2432500FFE199 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0510;
+				ORGANIZATIONNAME = "Arseniy Pavlenko";
+			};
+			buildConfigurationList = A43AE2E019A2432500FFE199 /* Build configuration list for PBXProject "redis-v12" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = A43AE2DC19A2432500FFE199;
+			productRefGroup = A43AE2E619A2432500FFE199 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A4A48FC719A244BA00B67BB8 /* redis-cli */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A4A48FC419A244BA00B67BB8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A4A48FEE19A2452F00B67BB8 /* sds.c in Sources */,
+				A4A48FEA19A2452F00B67BB8 /* anet.c in Sources */,
+				A4A48FEB19A2452F00B67BB8 /* crc64.c in Sources */,
+				A4A48FEF19A2452F00B67BB8 /* zmalloc.c in Sources */,
+				A4A48FE919A2452F00B67BB8 /* ae.c in Sources */,
+				A4A48FE419A2452F00B67BB8 /* adlist.c in Sources */,
+				A4A48FED19A2452F00B67BB8 /* release.c in Sources */,
+				A4A48FEC19A2452F00B67BB8 /* redis-cli.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		A43AE2EC19A2432500FFE199 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		A43AE2ED19A2432500FFE199 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		A4A48FCF19A244BA00B67BB8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					../deps/hiredis/,
+					../deps/linenoise/,
+				);
+				OTHER_LDFLAGS = (
+					../deps/hiredis/libhiredis.a,
+					../deps/linenoise/linenoise.o,
+				);
+				PRELINK_LIBS = "";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				USER_HEADER_SEARCH_PATHS = "../deps/hiredis ../deps/linenoise";
+			};
+			name = Debug;
+		};
+		A4A48FD019A244BA00B67BB8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				LIBRARY_SEARCH_PATHS = (
+					../deps/hiredis/,
+					../deps/linenoise/,
+				);
+				OTHER_LDFLAGS = (
+					../deps/hiredis/libhiredis.a,
+					../deps/linenoise/linenoise.o,
+				);
+				PRELINK_LIBS = "";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				USER_HEADER_SEARCH_PATHS = "../deps/hiredis ../deps/linenoise";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A43AE2E019A2432500FFE199 /* Build configuration list for PBXProject "redis-v12" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A43AE2EC19A2432500FFE199 /* Debug */,
+				A43AE2ED19A2432500FFE199 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A4A48FCE19A244BA00B67BB8 /* Build configuration list for PBXNativeTarget "redis-cli" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A4A48FCF19A244BA00B67BB8 /* Debug */,
+				A4A48FD019A244BA00B67BB8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = A43AE2DD19A2432500FFE199 /* Project object */;
+}
