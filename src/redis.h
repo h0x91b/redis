@@ -1539,4 +1539,5 @@ void redisLogHexDump(int level, char *descr, void *value, size_t len);
 
 int v8_init();
 void jsCommand(redisClient *c);
+void jsCommandPersistent(redisClient *c);
 #endif

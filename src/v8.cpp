@@ -1,5 +1,6 @@
 #include <v8.h>
 #include <hiredis.h>
+#include <stdbool.h>
 
 using namespace v8;
 
@@ -128,16 +129,17 @@ int v8_init() {
 	return 0;
 }
 
-void jsCommand(redisClient *c) {
-	redisLog(REDIS_NOTICE, "jsCommand \"%s\"", c->argv[1]->ptr);
+void v8_run_js(redisClient *c, bool isolated) {
 	Isolate::Scope isolateScope(isolate);
 	HandleScope handle_scope(isolate);
 	
 	Local<ObjectTemplate> global = Local<ObjectTemplate>::New(isolate, _global);
 	
-	Handle<Context> v8_context = Context::New(isolate,NULL,global);
-	//persistent context, if need...
-	//Local<Context> v8_context = Local<Context>::New(isolate, persistent_v8_context);
+	Handle<Context> v8_context;
+	if(isolated) 
+		v8_context = Context::New(isolate,NULL,global);
+	else
+		v8_context = Local<Context>::New(isolate, persistent_v8_context);
 	Context::Scope context_scope(v8_context);
 	Handle<String> source = String::NewFromUtf8(isolate, (const char *)c->argv[1]->ptr);
 	
@@ -176,5 +178,14 @@ void jsCommand(redisClient *c) {
 	
 	redisLog(REDIS_NOTICE, "Script execution result: %s", *resStr);
 	addReplyBulkCString(c,*resStr);
-	return;
+}
+
+void jsCommand(redisClient *c) {
+	redisLog(REDIS_NOTICE, "jsCommand \"%s\"", c->argv[1]->ptr);
+	v8_run_js(c, TRUE);
+}
+
+void jsCommandPersistent(redisClient *c) {
+	redisLog(REDIS_NOTICE, "jsCommandPersistent \"%s\"", c->argv[1]->ptr);
+	v8_run_js(c, FALSE);
 }
