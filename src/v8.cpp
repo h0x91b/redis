@@ -115,6 +115,7 @@ int v8_init() {
 	Local<ObjectTemplate> Redis = ObjectTemplate::New(isolate);
 	Redis->Set(String::NewFromUtf8(isolate, "call"), FunctionTemplate::New(isolate, RedisCall));
 	global->Set(String::NewFromUtf8(isolate, "Redis"), Redis);
+	global->Set(String::NewFromUtf8(isolate, "_fncCache"), ObjectTemplate::New(isolate));
 	
 	Handle<Context> v8_context = Context::New(isolate,NULL,global);
 	persistent_v8_context.Reset(isolate, v8_context);
@@ -135,12 +136,30 @@ void jsCommand(redisClient *c) {
 	
 	Local<ObjectTemplate> global = Local<ObjectTemplate>::New(isolate, _global);
 	
+	{
+		Isolate::Scope isolateScope(isolate);
+		HandleScope handle_scope(isolate);
+		Local<Context> v8_context = Local<Context>::New(isolate, persistent_v8_context);
+		Context::Scope context_scope(v8_context);
+		//dictGenHashFunction
+		unsigned int hash = dictGenHashFunction((const char *)c->argv[1]->ptr, strlen((const char *)c->argv[1]->ptr));
+		redisLog(REDIS_NOTICE, "hash of js function %d", hash);
+		
+		Local<Object> window = isolate->GetCurrentContext()->Global();
+		Local<Object> fncCache = Local<Object>::Cast(window->Get(String::NewFromUtf8(isolate,"_fncCache")));
+		if(fncCache->Has(hash)) {
+			redisLog(REDIS_NOTICE, "function in cache");
+		} else {
+			redisLog(REDIS_NOTICE, "function NOT in cache");
+			fncCache->Set(hash, String::NewFromUtf8(isolate, "dfdf"));
+		}
+	}
+	
 	Handle<Context> v8_context = Context::New(isolate,NULL,global);
 	//persistent context, if need...
 	//Local<Context> v8_context = Local<Context>::New(isolate, persistent_v8_context);
 	Context::Scope context_scope(v8_context);
 	Handle<String> source = String::NewFromUtf8(isolate, (const char *)c->argv[1]->ptr);
-	
 	Local<Object> window = isolate->GetCurrentContext()->Global();
 	Local<Function> jsFunction = Local<Function>::Cast(window->Get(String::NewFromUtf8(isolate, "Function")));
 	Local<Value> args[] = { String::NewFromUtf8(isolate, (const char *)c->argv[1]->ptr) };
