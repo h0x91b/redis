@@ -155,7 +155,6 @@ void v8_run_js(redisClient *c, bool isolated) {
 		addReplyError(c,*exception_str);
 		return;
 	}
-	redisLog(REDIS_NOTICE,"Compiled");
 	Local<Value> result = tmpFunc->Call(window, 0, 0);
 	
 	if(result.IsEmpty()) {
@@ -176,16 +175,15 @@ void v8_run_js(redisClient *c, bool isolated) {
 	Local<String> res = Local<String>::Cast(stringify->Call(JSON, 3, args2));
 	String::Utf8Value resStr(res);
 	
-	redisLog(REDIS_NOTICE, "Script execution result: %s", *resStr);
 	addReplyBulkCString(c,*resStr);
 }
 
 void jsCommand(redisClient *c) {
-	redisLog(REDIS_NOTICE, "jsCommand \"%s\"", c->argv[1]->ptr);
+	redisLog(REDIS_DEBUG, "jsCommand \"%s\"", c->argv[1]->ptr);
 	v8_run_js(c, TRUE);
 }
 
 void jsCommandPersistent(redisClient *c) {
-	redisLog(REDIS_NOTICE, "jsCommandPersistent \"%s\"", c->argv[1]->ptr);
+	redisLog(REDIS_DEBUG, "jsCommandPersistent \"%s\"", c->argv[1]->ptr);
 	v8_run_js(c, FALSE);
 }
