@@ -149,7 +149,7 @@ void jsCommand(redisClient *c) {
 	if(tmpFunc.IsEmpty()) {
 		Handle<Value> exception = trycatch.Exception();
 		String::Utf8Value exception_str(exception);
-		redisLog(REDIS_ERROR, "Exception while compiling script: %s", *exception_str);
+		redisLog(REDIS_WARNING, "Exception while compiling script: %s", *exception_str);
 		addReplyError(c,*exception_str);
 		return;
 	}
@@ -159,7 +159,7 @@ void jsCommand(redisClient *c) {
 	if(result.IsEmpty()) {
 		Handle<Value> exception = trycatch.Exception();
 		String::Utf8Value exception_str(exception);
-		redisLog(REDIS_ERROR, "Exception while running script: %s", *exception_str);
+		redisLog(REDIS_WARNING, "Exception while running script: %s", *exception_str);
 		addReplyError(c,*exception_str);
 		return;
 	}
