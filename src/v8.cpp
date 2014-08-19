@@ -1,6 +1,7 @@
 #include <v8.h>
 #include <hiredis.h>
 #include <stdbool.h>
+#include <stdio.h>
 
 using namespace v8;
 
@@ -129,7 +130,7 @@ int v8_init() {
 	return 0;
 }
 
-void v8_run_js(redisClient *c, bool isolated) {
+void v8_run_js(redisClient *c, const char* jsCode, bool isolated) {
 	Isolate::Scope isolateScope(isolate);
 	HandleScope handle_scope(isolate);
 	
@@ -141,11 +142,11 @@ void v8_run_js(redisClient *c, bool isolated) {
 	else
 		v8_context = Local<Context>::New(isolate, persistent_v8_context);
 	Context::Scope context_scope(v8_context);
-	Handle<String> source = String::NewFromUtf8(isolate, (const char *)c->argv[1]->ptr);
+	Handle<String> source = String::NewFromUtf8(isolate, jsCode);
 	
 	Local<Object> window = isolate->GetCurrentContext()->Global();
 	Local<Function> jsFunction = Local<Function>::Cast(window->Get(String::NewFromUtf8(isolate, "Function")));
-	Local<Value> args[] = { String::NewFromUtf8(isolate, (const char *)c->argv[1]->ptr) };
+	Local<Value> args[] = { String::NewFromUtf8(isolate, jsCode) };
 	TryCatch trycatch;
 	Local<Function> tmpFunc = Local<Function>::Cast(jsFunction->Call(window, 1, args));
 	if(tmpFunc.IsEmpty()) {
@@ -180,10 +181,39 @@ void v8_run_js(redisClient *c, bool isolated) {
 
 void jsCommand(redisClient *c) {
 	redisLog(REDIS_DEBUG, "jsCommand \"%s\"", c->argv[1]->ptr);
-	v8_run_js(c, TRUE);
+	v8_run_js(c, (const char *)c->argv[1]->ptr, TRUE);
 }
 
 void jsCommandPersistent(redisClient *c) {
 	redisLog(REDIS_DEBUG, "jsCommandPersistent \"%s\"", c->argv[1]->ptr);
-	v8_run_js(c, FALSE);
+	v8_run_js(c, (const char *)c->argv[1]->ptr, FALSE);
+}
+
+void jsLoadFile(redisClient *c) {
+	redisLog(REDIS_NOTICE, "jsLoadFile \"%s\"", c->argv[1]->ptr);
+	
+	Isolate::Scope isolateScope(isolate);
+	HandleScope handle_scope(isolate);
+	Handle<Context> v8_context;
+	Local<ObjectTemplate> global = Local<ObjectTemplate>::New(isolate, _global);
+	v8_context = Context::New(isolate,NULL,global);
+	Context::Scope context_scope(v8_context);
+	
+	FILE *f = fopen((const char*)c->argv[1]->ptr,"r");
+	if(!f) {
+		redisLog(REDIS_WARNING, "jsLoadFile failed");
+		addReplyError(c, (char*)"Cannot load file");
+		return;
+	}
+	fseek(f, 0L, SEEK_END);
+	size_t sz = ftell(f);
+	fseek(f, 0L, SEEK_SET);
+	
+	char *buf = (char*)zmalloc(sz+1);
+	size_t pos = fread(buf, 1, sz, f);
+	buf[pos] = 0;
+	fclose(f);
+	redisLog(REDIS_NOTICE, "code \"%s\"", buf);
+	v8_run_js(c, (const char*)buf, FALSE);
+	zfree(buf);
 }
