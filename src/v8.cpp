@@ -9,6 +9,21 @@ extern "C" {
 	#include "redis.h"
 }
 
+#define MULTI_LINE_STRING(...) #__VA_ARGS__
+const char * jsCore = MULTI_LINE_STRING(
+	(function($root){
+		window = $root;
+		console = {
+			debug: function(msg) { Redis.log(0, msg); },
+			info: function(msg) { Redis.log(1, msg); },
+			log: function(msg) { Redis.log(2, msg); },
+			error: function(msg) { Redis.log(3, msg); },
+		};
+		console.log('jsCore init done');
+	})(this);
+);
+
+void v8_run_js(redisClient *c, const char* jsCode, bool isolated);
 Isolate *isolate = NULL;
 Persistent<ObjectTemplate> _global;
 Persistent<Context> persistent_v8_context;
@@ -136,6 +151,8 @@ int v8_init() {
 		server.js_client->flags |= REDIS_LUA_CLIENT;
 	}
 	
+	v8_run_js(NULL, jsCore, FALSE);
+	
 	redisLog(REDIS_NOTICE,"v8_init done");
 	return 0;
 }
@@ -163,7 +180,7 @@ void v8_run_js(redisClient *c, const char* jsCode, bool isolated) {
 		Handle<Value> exception = trycatch.Exception();
 		String::Utf8Value exception_str(exception);
 		redisLog(REDIS_WARNING, "Exception while compiling script: %s", *exception_str);
-		addReplyError(c,*exception_str);
+		if(c) addReplyError(c,*exception_str);
 		return;
 	}
 	Local<Value> result = tmpFunc->Call(window, 0, 0);
@@ -172,10 +189,12 @@ void v8_run_js(redisClient *c, const char* jsCode, bool isolated) {
 		Handle<Value> exception = trycatch.Exception();
 		String::Utf8Value exception_str(exception);
 		redisLog(REDIS_WARNING, "Exception while running script: %s", *exception_str);
-		addReplyError(c,*exception_str);
+		if(c) addReplyError(c,*exception_str);
 		return;
 	}
 	
+	if(!c) return;
+	 
 	Local<Object> obj = Object::New(isolate);
 	obj->Set(String::NewFromUtf8(isolate, "r"), result);
 	
