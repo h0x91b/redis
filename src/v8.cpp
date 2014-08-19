@@ -37,7 +37,16 @@ Handle<Value> parseResponse(redisReply *rReply) {
 	}
 }
 
-void RedisInvoke(const v8::FunctionCallbackInfo<v8::Value>& args) {
+void V8RedisLog(const v8::FunctionCallbackInfo<v8::Value>& args) {
+	if(args.Length() < 2) {
+		isolate->ThrowException(String::NewFromUtf8(isolate, "Wrong number of arguments for V8RedisLog"));
+	}
+	int level = Local<Integer>::Cast(args[0])->Value();
+	String::Utf8Value msg(args[1]);
+	redisLog(level, (char*)*msg);
+}
+
+void V8RedisInvoke(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	//redisLog(REDIS_NOTICE,"APICall %d arguments", args.Length());
 	
 	struct redisCommand *cmd;
@@ -115,7 +124,8 @@ int v8_init() {
 	global->Set(String::NewFromUtf8(isolate, "hello"), String::NewFromUtf8(isolate, "world"));
 	
 	Local<ObjectTemplate> Redis = ObjectTemplate::New(isolate);
-	Redis->Set(String::NewFromUtf8(isolate, "invoke"), FunctionTemplate::New(isolate, RedisInvoke));
+	Redis->Set(String::NewFromUtf8(isolate, "invoke"), FunctionTemplate::New(isolate, V8RedisInvoke));
+	Redis->Set(String::NewFromUtf8(isolate, "log"), FunctionTemplate::New(isolate, V8RedisLog));
 	global->Set(String::NewFromUtf8(isolate, "Redis"), Redis);
 	
 	Handle<Context> v8_context = Context::New(isolate,NULL,global);
@@ -213,7 +223,7 @@ void jsLoadFile(redisClient *c) {
 	size_t pos = fread(buf, 1, sz, f);
 	buf[pos] = 0;
 	fclose(f);
-	redisLog(REDIS_NOTICE, "code \"%s\"", buf);
+	redisLog(LOG_INFO, "code \"%s\"", buf);
 	v8_run_js(c, (const char*)buf, FALSE);
 	zfree(buf);
 }
