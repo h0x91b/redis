@@ -36,7 +36,7 @@ Handle<Value> parseResponse(redisReply *rReply) {
 	}
 }
 
-void RedisCall(const v8::FunctionCallbackInfo<v8::Value>& args) {
+void RedisInvoke(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	//redisLog(REDIS_NOTICE,"APICall %d arguments", args.Length());
 	
 	struct redisCommand *cmd;
@@ -114,7 +114,7 @@ int v8_init() {
 	global->Set(String::NewFromUtf8(isolate, "hello"), String::NewFromUtf8(isolate, "world"));
 	
 	Local<ObjectTemplate> Redis = ObjectTemplate::New(isolate);
-	Redis->Set(String::NewFromUtf8(isolate, "call"), FunctionTemplate::New(isolate, RedisCall));
+	Redis->Set(String::NewFromUtf8(isolate, "invoke"), FunctionTemplate::New(isolate, RedisInvoke));
 	global->Set(String::NewFromUtf8(isolate, "Redis"), Redis);
 	
 	Handle<Context> v8_context = Context::New(isolate,NULL,global);
