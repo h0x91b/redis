@@ -43,7 +43,7 @@ void V8RedisLog(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	}
 	int level = Local<Integer>::Cast(args[0])->Value();
 	String::Utf8Value msg(args[1]);
-	redisLog(level, (char*)*msg);
+	redisLog(level, "%s", (char*)*msg);
 }
 
 void V8RedisInvoke(const v8::FunctionCallbackInfo<v8::Value>& args) {
