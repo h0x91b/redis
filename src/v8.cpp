@@ -24,6 +24,7 @@ const char * jsCore = MULTI_LINE_STRING(
 );
 
 void v8_run_js(redisClient *c, const char* jsCode, bool isolated);
+void v8_restart();
 Isolate *isolate = NULL;
 Persistent<ObjectTemplate> _global;
 Persistent<Context> persistent_v8_context;
@@ -129,7 +130,7 @@ void V8RedisInvoke(const v8::FunctionCallbackInfo<v8::Value>& args) {
 }
 
 int v8_init() {
-	redisLog(REDIS_NOTICE,"v8_init");
+	redisLog(REDIS_NOTICE,"V8 initialization");
 	isolate = Isolate::New();
 	Isolate::Scope isolate_scope(isolate);
 	HandleScope handle_scope(isolate);
@@ -153,8 +154,16 @@ int v8_init() {
 	
 	v8_run_js(NULL, jsCore, FALSE);
 	
-	redisLog(REDIS_NOTICE,"v8_init done");
+	redisLog(REDIS_NOTICE,"V8 initialization done");
 	return 0;
+}
+
+void v8_restart() {
+	redisLog(REDIS_NOTICE,"Recreate a V8 subsystem");
+	_global.Reset();
+	persistent_v8_context.Reset();
+	isolate->Dispose();
+	v8_init();
 }
 
 void v8_run_js(redisClient *c, const char* jsCode, bool isolated) {
@@ -245,4 +254,9 @@ void jsLoadFile(redisClient *c) {
 	redisLog(LOG_INFO, "code \"%s\"", buf);
 	v8_run_js(c, (const char*)buf, FALSE);
 	zfree(buf);
+}
+
+void jsRestart(redisClient *c) {
+	v8_restart();
+	addReply(c,shared.ok);
 }

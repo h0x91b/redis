@@ -1541,4 +1541,5 @@ int v8_init();
 void jsCommand(redisClient *c);
 void jsCommandPersistent(redisClient *c);
 void jsLoadFile(redisClient *c);
+void jsRestart(redisClient *c);
 #endif

@@ -285,7 +285,8 @@ struct redisCommand redisCommandTable[] = {
     {"latency",latencyCommand,-2,"arslt",0,NULL,0,0,0,0,0},
     {"js",jsCommand,2,"rwm",0,NULL,1,1,1,0,0},
     {"jsp",jsCommandPersistent,2,"rwm",0,NULL,1,1,1,0,0},
-    {"jsloadfile",jsLoadFile,2,"rwm",0,NULL,1,1,1,0,0}
+    {"jsloadfile",jsLoadFile,2,"rwm",0,NULL,1,1,1,0,0},
+    {"jsrestart",jsRestart,1,"rwm",0,NULL,1,1,1,0,0}
 };
 
 struct evictionPoolEntry *evictionPoolAlloc(void);
