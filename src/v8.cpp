@@ -43,6 +43,10 @@ const char * jsCore = MULTI_LINE_STRING(
 						}
 					} catch(e) {
 						console.error('exception while running timer: '+e);
+						if(timer.isTimer && ++timer.exceptions >= 5) {
+							console.error('Got 5 exceptions on timer #'+timer.id+' killing it');
+							clearTimeout(timer.id);
+						}
 					}
 				});
 			}
@@ -57,7 +61,9 @@ const char * jsCore = MULTI_LINE_STRING(
 			timers[targetTime].push({
 				id: id,
 				fn: fn,
-				args: args
+				args: args,
+				exceptions: 0,
+				isTimer: false
 			});
 			return id;
 		};
@@ -68,16 +74,20 @@ const char * jsCore = MULTI_LINE_STRING(
 			if(typeof timers[targetTime] === 'undefined') {
 				timers[targetTime] = [];
 			}
-			var timerFn = function(){
+			var timerObj = {
+				id: id,
+				fn: timerFn,
+				args: args,
+				exceptions: 0,
+				isTimer: true
+			};
+			timers[targetTime].push(timerObj);
+			function timerFn(){
 				var targetTime = +new Date + dt;
 				if(typeof timers[targetTime] === 'undefined') {
 					timers[targetTime] = [];
 				}
-				timers[targetTime].push({
-					id: id,
-					fn: timerFn,
-					args: args
-				});
+				timers[targetTime].push(timerObj);
 				if(args) {
 					fn.apply(window, args);
 				}
@@ -85,11 +95,6 @@ const char * jsCore = MULTI_LINE_STRING(
 					fn();
 				}
 			};
-			timers[targetTime].push({
-				id: id,
-				fn: timerFn,
-				args: args
-			});
 			return id;
 		};
 		clearTimeout = clearInterval = function(id) {
