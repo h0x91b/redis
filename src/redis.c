@@ -1797,6 +1797,12 @@ void initServer(void) {
         redisPanic("Can't create the serverCron time event.");
         exit(1);
     }
+    
+    /* Create v8 timer cron */
+    if(aeCreateTimeEvent(server.el, 4, jsTimerCron, NULL, NULL) == AE_ERR) {
+        redisPanic("Can't create the jsTimerCron time event.");
+        exit(1);
+    }
 
     /* Create an event handler for accepting new connections in TCP and Unix
      * domain sockets. */
@@ -1838,6 +1844,7 @@ void initServer(void) {
     slowlogInit();
     latencyMonitorInit();
     bioInit();
+    v8_init();
 }
 
 /* Populates the Redis Command Table starting from the hard coded list
@@ -3633,7 +3640,6 @@ int main(int argc, char **argv) {
     }
 
     aeSetBeforeSleepProc(server.el,beforeSleep);
-    v8_init();
     aeMain(server.el);
     aeDeleteEventLoop(server.el);
     return 0;

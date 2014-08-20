@@ -11,16 +11,103 @@ extern "C" {
 
 #define MULTI_LINE_STRING(...) #__VA_ARGS__
 const char * jsCore = MULTI_LINE_STRING(
-	(function($root){
-		window = $root;
-		console = {
-			debug: function(msg) { Redis.log(0, msg); },
-			info: function(msg) { Redis.log(1, msg); },
-			log: function(msg) { Redis.log(2, msg); },
-			error: function(msg) { Redis.log(3, msg); },
+;(function($root){
+	window = $root;
+	console = {
+		debug: function(msg) { Redis.log(0, msg); },
+		info: function(msg) { Redis.log(1, msg); },
+		log: function(msg) { Redis.log(2, msg); },
+		error: function(msg) { Redis.log(3, msg); }
+	};
+	
+	(function timersSubsytem(){
+		var timers = {};
+		var timer_id = 0;
+		__runTimers = function() {
+			var now = +new Date;
+			var keys = Object.keys(timers);
+			keys.sort();
+			for(var i=0;i<keys.length;i++) {
+				var k = keys[i];
+				if(k > now) break;
+				var tmrs = timers[k];
+				delete timers[k];
+				tmrs.forEach(function runTimer(timer){
+					try {
+						if(timer.args) {
+							timer.fn.apply(window, timer.args);
+						}
+						else {
+							var fn = timer.fn;
+							fn();
+						}
+					} catch(e) {
+						console.error('exception while running timer: '+e);
+					}
+				});
+			}
 		};
-		console.log('jsCore init done');
-	})(this);
+		setTimeout = function(fn, dt) {
+			var targetTime = +new Date + dt;
+			var id = ++timer_id;
+			var args = arguments.length > 2 ? Array.prototype.slice.call(arguments, 2) : null;
+			if(typeof timers[targetTime] === 'undefined') {
+				timers[targetTime] = [];
+			}
+			timers[targetTime].push({
+				id: id,
+				fn: fn,
+				args: args
+			});
+			return id;
+		};
+		setInterval = function(fn, dt) {
+			var targetTime = +new Date + dt;
+			var id = ++timer_id;
+			var args = arguments.length > 2 ? Array.prototype.slice.call(arguments, 2) : null;
+			if(typeof timers[targetTime] === 'undefined') {
+				timers[targetTime] = [];
+			}
+			var timerFn = function(){
+				var targetTime = +new Date + dt;
+				if(typeof timers[targetTime] === 'undefined') {
+					timers[targetTime] = [];
+				}
+				timers[targetTime].push({
+					id: id,
+					fn: timerFn,
+					args: args
+				});
+				if(args) {
+					fn.apply(window, args);
+				}
+				else {
+					fn();
+				}
+			};
+			timers[targetTime].push({
+				id: id,
+				fn: timerFn,
+				args: args
+			});
+			return id;
+		};
+		clearTimeout = clearInterval = function(id) {
+			var found = false;
+			for(var k in timers) {
+				for(var i=0;i<timers[k].length;i++){
+					if(timers[k][i].id != id) continue;
+					found = true;
+					timers[k].splice(i,1);
+					if(timers[k].length == 0) delete timers[k];
+					break;
+				};
+				if(found) break;
+			}
+		};
+	})();
+	console.log('jsCore init done');
+})(this);
 );
 
 void v8_run_js(redisClient *c, const char* jsCode, bool isolated);
@@ -259,4 +346,14 @@ void jsLoadFile(redisClient *c) {
 void jsRestart(redisClient *c) {
 	v8_restart();
 	addReply(c,shared.ok);
+}
+
+int jsTimerCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
+	REDIS_NOTUSED(eventLoop);
+	REDIS_NOTUSED(id);
+	REDIS_NOTUSED(clientData);
+	
+	v8_run_js(NULL, "__runTimers();", FALSE);
+	
+	return 4;
 }

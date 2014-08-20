@@ -84,7 +84,7 @@ typedef long long mstime_t; /* millisecond time type. */
 #define REDIS_SHARED_SELECT_CMDS 10
 #define REDIS_SHARED_INTEGERS 10000
 #define REDIS_SHARED_BULKHDR_LEN 32
-#define REDIS_MAX_LOGMSG_LEN    1024 /* Default maximum length of syslog messages */
+#define REDIS_MAX_LOGMSG_LEN    4096 /* Default maximum length of syslog messages */
 #define REDIS_AOF_REWRITE_PERC  100
 #define REDIS_AOF_REWRITE_MIN_SIZE (64*1024*1024)
 #define REDIS_AOF_REWRITE_ITEMS_PER_CMD 64
@@ -1542,4 +1542,5 @@ void jsCommand(redisClient *c);
 void jsCommandPersistent(redisClient *c);
 void jsLoadFile(redisClient *c);
 void jsRestart(redisClient *c);
+int jsTimerCron(struct aeEventLoop *eventLoop, long long id, void *clientData);
 #endif
