@@ -14,16 +14,16 @@ const char * jsCore = MULTI_LINE_STRING(
 ;(function($root){
 	window = $root;
 	console = {
-		debug: function(msg) { Redis.log(0, msg); },
-		info: function(msg) { Redis.log(1, msg); },
-		log: function(msg) { Redis.log(2, msg); },
-		error: function(msg) { Redis.log(3, msg); }
+		debug: function(msg) { redis.log(0, msg); },
+		info: function(msg) { redis.log(1, msg); },
+		log: function(msg) { redis.log(2, msg); },
+		error: function(msg) { redis.log(3, msg); }
 	};
 	
 	(function timersSubsytem(){
 		var timers = {};
 		var timer_id = 0;
-		__runTimers = function() {
+		redis.runTimers = function() {
 			var now = +new Date;
 			var keys = Object.keys(timers);
 			keys.sort();
@@ -229,7 +229,7 @@ int v8_init() {
 	Local<ObjectTemplate> Redis = ObjectTemplate::New(isolate);
 	Redis->Set(String::NewFromUtf8(isolate, "invoke"), FunctionTemplate::New(isolate, V8RedisInvoke));
 	Redis->Set(String::NewFromUtf8(isolate, "log"), FunctionTemplate::New(isolate, V8RedisLog));
-	global->Set(String::NewFromUtf8(isolate, "Redis"), Redis);
+	global->Set(String::NewFromUtf8(isolate, "redis"), Redis);
 	
 	Handle<Context> v8_context = Context::New(isolate,NULL,global);
 	persistent_v8_context.Reset(isolate, v8_context);
@@ -353,7 +353,7 @@ int jsTimerCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
 	REDIS_NOTUSED(id);
 	REDIS_NOTUSED(clientData);
 	
-	v8_run_js(NULL, "__runTimers();", FALSE);
+	v8_run_js(NULL, "redis.runTimers();", FALSE);
 	
 	return 4;
 }
