@@ -244,6 +244,16 @@ int v8_init() {
 	
 	v8_run_js(NULL, jsCore, FALSE);
 	
+	Context::Scope context_scope(v8_context);
+	Local<Object> window = isolate->GetCurrentContext()->Global();
+	
+	Local<Array> array = window->GetPropertyNames();
+	for(int i=0;i<array->Length();i++) {
+		//String::Utf8Value key(array->Get(v8::Int32::New(isolate, i)));
+		//redisLog(REDIS_NOTICE,"key %s", *key);
+		global->Set(Local<String>::Cast(array->Get(v8::Int32::New(isolate, i))), window->Get(array->Get(v8::Int32::New(isolate, i))));
+	}
+	
 	redisLog(REDIS_NOTICE,"V8 initialization done");
 	return 0;
 }
