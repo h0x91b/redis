@@ -9,6 +9,12 @@ extern "C" {
 	#include "redis.h"
 }
 
+void v8_run_js(redisClient *c, const char* jsCode, bool isolated);
+void v8_restart();
+Isolate *isolate = NULL;
+Persistent<ObjectTemplate> _global;
+Persistent<Context> persistent_v8_context;
+
 #define MULTI_LINE_STRING(...) #__VA_ARGS__
 const char * jsCore = MULTI_LINE_STRING(
 ;(function($root){
@@ -115,12 +121,6 @@ const char * jsCore = MULTI_LINE_STRING(
 })(this);
 );
 
-void v8_run_js(redisClient *c, const char* jsCode, bool isolated);
-void v8_restart();
-Isolate *isolate = NULL;
-Persistent<ObjectTemplate> _global;
-Persistent<Context> persistent_v8_context;
-
 Handle<Value> parseResponse(redisReply *rReply) {
 	Local<Array> arr;
 	switch(rReply->type) {
@@ -226,10 +226,8 @@ int v8_init() {
 	isolate = Isolate::New();
 	Isolate::Scope isolate_scope(isolate);
 	HandleScope handle_scope(isolate);
-	_global.Reset(isolate, ObjectTemplate::New());
+	_global.Reset(isolate, ObjectTemplate::New(isolate));
 	Local<ObjectTemplate> global = Local<ObjectTemplate>::New(isolate, _global);
-	
-	global->Set(String::NewFromUtf8(isolate, "hello"), String::NewFromUtf8(isolate, "world"));
 	
 	Local<ObjectTemplate> Redis = ObjectTemplate::New(isolate);
 	Redis->Set(String::NewFromUtf8(isolate, "invoke"), FunctionTemplate::New(isolate, V8RedisInvoke));
