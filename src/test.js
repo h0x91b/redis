@@ -1,14 +1,35 @@
-//const int syslogLevelMap[] = { LOG_DEBUG, LOG_INFO, LOG_NOTICE, LOG_WARNING };
-console = {
-	debug: function(msg) { Redis.log(0, msg); },
-	info: function(msg) { Redis.log(1, msg); },
-	log: function(msg) { Redis.log(2, msg); },
-	error: function(msg) { Redis.log(3, msg); },
+function bench(desc, fn) {
+	var now = +new Date;
+	fn();
+	console.log(desc+' speed: '+(1000000/((+new Date-now)/1000))+' ops/sec');
 }
 
-console.debug('debug');
-console.info('info');
-console.log('log');
-console.error('error');
-Redis.invoke('SET', 'Hello', 'World');
-return Redis.invoke('GET', 'Hello');
+bench('incr', function(){
+	for(var i=0;i<1000000;i++) {
+		redis.invoke('incr', 'incr');
+	}
+});
+
+bench('set', function(){
+	for(var i=0;i<1000000;i++) {
+		redis.invoke('set', 'hello', i);
+	}
+});
+
+bench('get', function(){
+	for(var i=0;i<1000000;i++) {
+		redis.invoke('get', 'hello');
+	}
+});
+
+bench('hmset', function(){
+	for(var i=0;i<1000000;i++) {
+		redis.invoke('hmset', 'hset', i, i);
+	}
+});
+
+bench('hget', function(){
+	for(var i=0;i<1000000;i++) {
+		redis.invoke('hget', 'hset', i);
+	}
+});

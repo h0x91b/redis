@@ -351,7 +351,7 @@ void jsLoadFile(redisClient *c) {
 	size_t pos = fread(buf, 1, sz, f);
 	buf[pos] = 0;
 	fclose(f);
-	redisLog(LOG_INFO, "code \"%s\"", buf);
+	redisLog(REDIS_DEBUG, "code \"%s\"", buf);
 	v8_run_js(c, (const char*)buf, FALSE);
 	zfree(buf);
 }
