@@ -9,12 +9,29 @@
 			<key>isShown</key>
 			<true/>
 			<key>orderHint</key>
+			<integer>0</integer>
+		</dict>
+		<key>redis-server.xcscheme</key>
+		<dict>
+			<key>isShown</key>
+			<true/>
+			<key>orderHint</key>
 			<integer>1</integer>
 		</dict>
 	</dict>
 	<key>SuppressBuildableAutocreation</key>
 	<dict>
 		<key>A43AE2E419A2432500FFE199</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>A491D97219ADEC180013C8CB</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>A491D9F519ADF3A70013C8CB</key>
 		<dict>
 			<key>primary</key>
 			<true/>
