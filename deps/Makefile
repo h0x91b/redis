@@ -84,6 +84,6 @@ jemalloc: .make-prerequisites
 .PHONY: jemalloc
 
 v8:
-	export PATH=$(CURDIR)/depot_tools/:$(PATH) && cd v8 && make builddeps && make dependencies && make x64.release
+	export PATH=$(CURDIR)/depot_tools/:$(PATH) && cd v8 && make builddeps && make dependencies && make -j 4 x64.release
 
 .PHONY: v8
