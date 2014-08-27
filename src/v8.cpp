@@ -162,7 +162,7 @@ void V8RedisInvoke(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	sds reply;
 	int argc = args.Length();
 	static robj **argv = NULL;
-	static int argv_size = 0;
+	//static int argv_size = 0;
 	
 	argv = (robj**)zmalloc(sizeof(robj*)*argc);
 	HandleScope handle_scope(isolate);
@@ -207,7 +207,7 @@ void V8RedisInvoke(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	redisReaderGetReply(rr, &aux);
 	redisReply *rReply = (redisReply*)aux;
 	Handle<Value> ret_value = parseResponse(rReply);
-	Local<String> v8reply = String::NewFromUtf8(isolate, reply);
+	//Local<String> v8reply = String::NewFromUtf8(isolate, reply);
 	
 	freeReplyObject(aux);
 	redisReaderFree(rr);
@@ -278,7 +278,7 @@ void v8_run_js(redisClient *c, const char* jsCode, bool isolated) {
 	else
 		v8_context = Local<Context>::New(isolate, persistent_v8_context);
 	Context::Scope context_scope(v8_context);
-	Handle<String> source = String::NewFromUtf8(isolate, jsCode);
+	//Handle<String> source = String::NewFromUtf8(isolate, jsCode);
 	
 	Local<Object> window = isolate->GetCurrentContext()->Global();
 	Local<Function> jsFunction = Local<Function>::Cast(window->Get(String::NewFromUtf8(isolate, "Function")));
