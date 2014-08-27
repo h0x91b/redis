@@ -368,5 +368,5 @@ int jsTimerCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
 	
 	v8_run_js(NULL, "redis.runTimers();", FALSE);
 	
-	return 4;
+	return 10;
 }

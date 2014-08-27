@@ -1799,7 +1799,7 @@ void initServer(void) {
     }
     
     /* Create v8 timer cron */
-    if(aeCreateTimeEvent(server.el, 4, jsTimerCron, NULL, NULL) == AE_ERR) {
+    if(aeCreateTimeEvent(server.el, 10, jsTimerCron, NULL, NULL) == AE_ERR) {
         redisPanic("Can't create the jsTimerCron time event.");
         exit(1);
     }
