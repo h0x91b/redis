@@ -154,6 +154,24 @@ void V8RedisLog(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	redisLog(level, "%s", (char*)*msg);
 }
 
+Handle<Value> FastGet(redisClient *c, robj **argv) {
+	robj *obj = lookupKeyRead(c->db, argv[1]);
+	
+	if(obj == NULL) {
+		return Undefined(isolate);
+	}
+	
+	if(obj->type != REDIS_STRING) {
+		isolate->ThrowException(String::NewFromUtf8(isolate, "Key is not String!"));
+		//decrRefCount(obj);
+		return Undefined(isolate);
+	}
+	if(obj->encoding == REDIS_ENCODING_INT) {
+		return Integer::New(isolate, (int64_t)obj->ptr);
+	}
+	return String::NewFromUtf8(isolate, (const char *)obj->ptr);
+}
+
 void V8RedisInvoke(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	//redisLog(REDIS_NOTICE,"APICall %d arguments", args.Length());
 	
@@ -169,6 +187,15 @@ void V8RedisInvoke(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	for (int i = 0; i < args.Length(); i++) {
 		v8::String::Utf8Value str(args[i]);
 		argv[i] = createStringObject((char*)*str,str.length());
+	}
+	
+	if(strcasecmp((const char*)argv[0]->ptr, "get") == 0) {
+		args.GetReturnValue().Set(FastGet(c, argv));
+		c->reply_bytes = 0;
+		for (int j = 0; j < argc; j++)
+			decrRefCount(argv[j]);
+		zfree(argv);
+		return;
 	}
 	
 	c->argv = argv;
