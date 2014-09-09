@@ -180,9 +180,9 @@ void V8RedisInvoke(const v8::FunctionCallbackInfo<v8::Value>& args) {
 		//clean there
 		c->reply_bytes = 0;
 
-		for (int j = 0; j < c->argc; j++)
-			decrRefCount(c->argv[j]);
-		zfree(c->argv);
+		for (int j = 0; j < argc; j++)
+			decrRefCount(argv[j]);
+		zfree(argv);
 		return;
 	}
 	
@@ -207,6 +207,7 @@ void V8RedisInvoke(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	redisReaderGetReply(rr, &aux);
 	redisReply *rReply = (redisReply*)aux;
 	Handle<Value> ret_value = parseResponse(rReply);
+	args.GetReturnValue().Set(ret_value);
 	//Local<String> v8reply = String::NewFromUtf8(isolate, reply);
 	
 	freeReplyObject(aux);
@@ -215,10 +216,9 @@ void V8RedisInvoke(const v8::FunctionCallbackInfo<v8::Value>& args) {
 	sdsfree(reply);
 	c->reply_bytes = 0;
 
-	for (int j = 0; j < c->argc; j++)
-		decrRefCount(c->argv[j]);
-	zfree(c->argv);
-	args.GetReturnValue().Set(ret_value);
+	for (int j = 0; j < argc; j++)
+		decrRefCount(argv[j]);
+	zfree(argv);
 }
 
 int v8_init() {
