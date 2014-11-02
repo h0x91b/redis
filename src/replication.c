@@ -1470,7 +1470,7 @@ void replicationUnsetMaster(void) {
 void slaveofCommand(redisClient *c) {
     /* SLAVEOF is not allowed in cluster mode as replication is automatically
      * configured using the current address of the master node. */
-    if (server.cluster_enabled) {
+    if (server.cluster_enabled && server.allow_slaveof_in_cluster_mode != 1) {
         addReplyError(c,"SLAVEOF not allowed in cluster mode.");
         return;
     }

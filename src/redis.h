@@ -877,6 +877,7 @@ struct redisServer {
                                    xor of REDIS_NOTIFY... flags. */
     /* Cluster */
     int cluster_enabled;      /* Is cluster enabled? */
+	int allow_slaveof_in_cluster_mode; /* If you need to do a full replication over DataCenters */
     mstime_t cluster_node_timeout; /* Cluster node timeout. */
     char *cluster_configfile; /* Cluster auto-generated config file name. */
     struct clusterState *cluster;  /* State of the cluster */
