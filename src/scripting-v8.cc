@@ -13,6 +13,7 @@ extern "C" {
 using namespace v8;
 
 v8::Platform* platform;
+sds wrapped_script;
 
 class ArrayBufferAllocator : public v8::ArrayBuffer::Allocator {
  public:
@@ -32,6 +33,7 @@ void initV8() {
     ::platform = v8::platform::CreateDefaultPlatform();
     V8::InitializePlatform(::platform);
     V8::Initialize();
+    wrapped_script = sdsempty();
     serverLog(LL_WARNING,"V8 initialized");
 }
 
@@ -39,6 +41,7 @@ void shutdownV8() {
     V8::Dispose();
     V8::ShutdownPlatform();
     delete ::platform;
+    sdsfree(wrapped_script);
     serverLog(LL_WARNING,"V8 destroyed");
 }
 
@@ -54,10 +57,14 @@ void jsEvalCommand(client *c) {
         Local<Context> context = Context::New(isolate);
         Context::Scope context_scope(context);
         
-        sds wrapped_script = sdsempty();
+        //flush previous data
+        wrapped_script[0] = '\0';
+        sdsupdatelen(wrapped_script);
+        
         wrapped_script = sdscatlen(wrapped_script, "JSON.stringify((function wrap(){\n", 33);
         wrapped_script = sdscatlen(wrapped_script, (const char*)c->argv[1]->ptr, sdslen((const sds)c->argv[1]->ptr));
         wrapped_script = sdscatlen(wrapped_script, "\n})(), null, '\\t');", 19);
+        
         Local<String> source = String::NewFromUtf8(
             isolate, 
             wrapped_script, 
@@ -85,7 +92,6 @@ void jsEvalCommand(client *c) {
             addReplyBulk(c,o);
             decrRefCount(o);
         }
-        sdsfree(wrapped_script);
     }
     
     isolate->Dispose();
