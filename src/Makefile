@@ -18,7 +18,7 @@ OPTIMIZATION?=-O2
 DEPENDENCY_TARGETS=hiredis linenoise lua geohash-int v8
 
 # Default settings
-STD=-std=c99 -pedantic -DREDIS_STATIC=''
+STD=-pedantic -DREDIS_STATIC=''
 WARN=-Wall -W
 OPT=$(OPTIMIZATION)
 
@@ -54,7 +54,7 @@ endif
 -include .make-settings
 
 FINAL_CFLAGS=$(STD) $(WARN) $(OPT) $(DEBUG) $(CFLAGS) $(REDIS_CFLAGS) -I../deps/geohash-int
-FINAL_CXXFLAGS=$(WARN) $(OPT) $(DEBUG) $(CFLAGS) $(REDIS_CFLAGS) -I../deps/geohash-int -I../deps/v8/include/
+FINAL_CXXFLAGS=$(STD) $(WARN) $(OPT) $(DEBUG) $(CFLAGS) $(REDIS_CFLAGS) -I../deps/geohash-int -I../deps/v8/include/ -Wc++11-long-long -Wc99-extensions
 FINAL_LDFLAGS=$(LDFLAGS) $(REDIS_LDFLAGS) $(DEBUG)
 FINAL_LIBS=-lm -stdlib=libstdc++ ../deps/v8/out/x64.release/{libv8_{base,libbase,libplatform,nosnapshot},libicu{i18n,uc,data}}.a
 DEBUG=-g -ggdb
@@ -95,11 +95,13 @@ FINAL_CFLAGS+= -I../deps/hiredis -I../deps/linenoise -I../deps/lua/src
 
 ifeq ($(MALLOC),tcmalloc)
 	FINAL_CFLAGS+= -DUSE_TCMALLOC
+	FINAL_CXXFLAGS+= -DUSE_TCMALLOC
 	FINAL_LIBS+= -ltcmalloc
 endif
 
 ifeq ($(MALLOC),tcmalloc_minimal)
 	FINAL_CFLAGS+= -DUSE_TCMALLOC
+	FINAL_CXXFLAGS+= -DUSE_TCMALLOC
 	FINAL_LIBS+= -ltcmalloc_minimal
 endif
 
@@ -107,6 +109,7 @@ ifeq ($(MALLOC),jemalloc)
 	DEPENDENCY_TARGETS+= jemalloc
 	FINAL_CFLAGS+= -DUSE_JEMALLOC -I../deps/jemalloc/include
 	FINAL_LIBS+= ../deps/jemalloc/lib/libjemalloc.a
+	FINAL_CXXFLAGS+= -DUSE_JEMALLOC -I../deps/jemalloc/include
 endif
 
 REDIS_CC=$(QUIET_CC)$(CC) $(FINAL_CFLAGS)
@@ -211,10 +214,10 @@ $(REDIS_CHECK_AOF_NAME): $(REDIS_CHECK_AOF_OBJ)
 # building it should complete before building any other object. Instead of
 # depending on a single artifact, build all dependencies first.
 %.o: %.c .make-prerequisites
-	$(REDIS_CC) -c $<
+	$(REDIS_CC) -std=c99 -c $<
 
 %.o: %.cc .make-prerequisites
-	$(REDIS_CXX) -c $<
+	$(REDIS_CXX) -Wc++11-extensions -c $<
 
 clean:
 	rm -rf $(REDIS_SERVER_NAME) $(REDIS_SENTINEL_NAME) $(REDIS_CLI_NAME) $(REDIS_BENCHMARK_NAME) $(REDIS_CHECK_RDB_NAME) $(REDIS_CHECK_AOF_NAME) *.o *.gcda *.gcno *.gcov redis.info lcov-html
