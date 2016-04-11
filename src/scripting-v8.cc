@@ -1,6 +1,6 @@
 #include "scripting-v8.h"
 extern "C" {
-		#include "server.h"
+    #include "server.h"
 }
 
 #include <stdio.h>
@@ -12,68 +12,81 @@ extern "C" {
 
 using namespace v8;
 
+v8::Platform* platform;
+
 class ArrayBufferAllocator : public v8::ArrayBuffer::Allocator {
  public:
-	virtual void* Allocate(size_t length) {
-		void* data = AllocateUninitialized(length);
-		return data == NULL ? data : memset(data, 0, length);
-	}
-	virtual void* AllocateUninitialized(size_t length) { return malloc(length); }
-	virtual void Free(void* data, size_t) { free(data); }
+    virtual void* Allocate(size_t length) {
+        void* data = AllocateUninitialized(length);
+        return data == NULL ? data : memset(data, 0, length);
+    }
+    virtual void* AllocateUninitialized(size_t length) { return zmalloc(length); }
+    virtual void Free(void* data, size_t) { zfree(data); }
 };
 
 
-int v8hello() {
-	// Initialize V8.
-	V8::InitializeICU();
-	// V8::InitializeExternalStartupData("");
-	Platform* platform = platform::CreateDefaultPlatform();
-	V8::InitializePlatform(platform);
-	V8::Initialize();
-
-	// Create a new Isolate and make it the current one.
-	ArrayBufferAllocator allocator;
-	Isolate::CreateParams create_params;
-	create_params.array_buffer_allocator = &allocator;
-	Isolate* isolate = Isolate::New(create_params);
-	{
-		Isolate::Scope isolate_scope(isolate);
-
-		// Create a stack-allocated handle scope.
-		HandleScope handle_scope(isolate);
-
-		// Create a new context.
-		Local<Context> context = Context::New(isolate);
-
-		// Enter the context for compiling and running the hello world script.
-		Context::Scope context_scope(context);
-
-		// Create a string containing the JavaScript source code.
-		Local<String> source =
-				String::NewFromUtf8(isolate, "'Hello' + ', World!'",
-														NewStringType::kNormal).ToLocalChecked();
-
-		// Compile the source code.
-		Local<Script> script = Script::Compile(context, source).ToLocalChecked();
-
-		// Run the script to get the result.
-		Local<Value> result = script->Run(context).ToLocalChecked();
-
-		// Convert the result to an UTF8 string and print it.
-		String::Utf8Value utf8(result);
-		printf("%s\n", *utf8);
-	}
-
-	// Dispose the isolate and tear down V8.
-	isolate->Dispose();
-	V8::Dispose();
-	V8::ShutdownPlatform();
-	delete platform;
-	return 0;
+void initV8() {
+    // Initialize V8.
+    V8::InitializeICU();
+    // V8::InitializeExternalStartupData("");
+    ::platform = v8::platform::CreateDefaultPlatform();
+    V8::InitializePlatform(::platform);
+    V8::Initialize();
+    serverLog(LL_WARNING,"V8 initialized");
 }
 
+void shutdownV8() {
+    V8::Dispose();
+    V8::ShutdownPlatform();
+    delete ::platform;
+    serverLog(LL_WARNING,"V8 destroyed");
+}
 
-void helloworld() {
-	printf("Hello world\n");
-	v8hello();
+void jsEvalCommand(client *c) {
+    ArrayBufferAllocator allocator;
+    Isolate::CreateParams create_params;
+    create_params.array_buffer_allocator = &allocator;
+    Isolate* isolate = Isolate::New(create_params);
+    
+    {
+        Isolate::Scope isolate_scope(isolate);
+        HandleScope handle_scope(isolate);
+        Local<Context> context = Context::New(isolate);
+        Context::Scope context_scope(context);
+        
+        sds wrapped_script = sdsempty();
+        wrapped_script = sdscatlen(wrapped_script, "JSON.stringify((function wrap(){\n", 33);
+        wrapped_script = sdscatlen(wrapped_script, (const char*)c->argv[1]->ptr, sdslen((const sds)c->argv[1]->ptr));
+        wrapped_script = sdscatlen(wrapped_script, "\n})(), null, '\\t');", 19);
+        Local<String> source = String::NewFromUtf8(
+            isolate, 
+            wrapped_script, 
+            NewStringType::kNormal, 
+            sdslen((const sds)c->argv[1]->ptr) + 33 + 19
+        ).ToLocalChecked();
+        TryCatch trycatch(isolate);
+        Local<Script> script;
+        
+        if(!Script::Compile(context, source).ToLocal(&script)) {
+            String::Utf8Value error(trycatch.Exception());
+            serverLog(LL_WARNING, "JS Compile exception %s\n", *error);
+            addReplyErrorFormat(c, "JS Compile exception %s", *error);
+            return;
+        }
+        Local<Value> result;
+        if(!script->Run(context).ToLocal(&result)) {
+            String::Utf8Value error(trycatch.Exception());
+            serverLog(LL_WARNING, "JS Runtime exception %s\n", *error);
+            addReplyErrorFormat(c, "JS Runtime exception %s", *error);
+        } else {
+            String::Utf8Value utf8(result);
+            robj *o;
+            o = createObject(OBJ_STRING,sdsnew(*utf8));
+            addReplyBulk(c,o);
+            decrRefCount(o);
+        }
+        sdsfree(wrapped_script);
+    }
+    
+    isolate->Dispose();
 }
