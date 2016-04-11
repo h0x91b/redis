@@ -54,6 +54,7 @@
 #include <sys/utsname.h>
 #include <locale.h>
 #include <sys/socket.h>
+#include "scripting-v8.h"
 
 /* Our shared "common" objects */
 
@@ -3481,6 +3482,8 @@ int redisIsSupervised(int mode) {
 int main(int argc, char **argv) {
     struct timeval tv;
     int j;
+    
+    helloworld();
 
 #ifdef REDIS_TEST
     if (argc == 3 && !strcasecmp(argv[1], "test")) {
