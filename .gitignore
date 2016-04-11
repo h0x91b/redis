@@ -27,3 +27,7 @@ deps/lua/src/liblua.a
 .make-*
 .prerequisites
 *.dSYM
+deps/.gclient
+deps/.gclient*
+deps/_gclient*
+deps/v8/

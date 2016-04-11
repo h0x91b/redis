@@ -1,5 +1,4 @@
 # Redis dependency Makefile
-
 uname_S:= $(shell sh -c 'uname -s 2>/dev/null || echo not')
 
 CCCOLOR="\033[34m"
@@ -38,6 +37,8 @@ distclean:
 	-(cd lua && $(MAKE) clean) > /dev/null || true
 	-(cd geohash-int && $(MAKE) clean) > /dev/null || true
 	-(cd jemalloc && [ -f Makefile ] && $(MAKE) distclean) > /dev/null || true
+	-(rm -rf v8 > /dev/null) || true
+	-(rm -rf .gclient > /dev/null) || true
 	-(rm -f .make-*)
 
 .PHONY: distclean
@@ -86,5 +87,8 @@ jemalloc: .make-prerequisites
 geohash-int: .make-prerequisites
 	@printf '%b %b\n' $(MAKECOLOR)MAKE$(ENDCOLOR) $(BINCOLOR)$@$(ENDCOLOR)
 	cd geohash-int && $(MAKE)
+
+v8:
+	export PATH=depot_tools:$$PATH; echo $$PATH;fetch --no-history v8 && cd v8 && make x64.release OUTDIR=out snapshot=off -j 8
 
 .PHONY: geohash-int
