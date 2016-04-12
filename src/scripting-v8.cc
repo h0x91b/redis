@@ -9,6 +9,7 @@ extern "C" {
 
 #include "libplatform/libplatform.h"
 #include "v8.h"
+#include "../deps/hiredis/hiredis.h"
 
 using namespace v8;
 
@@ -42,6 +43,134 @@ void Hello(const v8::FunctionCallbackInfo<v8::Value>& args) {
     fflush(stdout);
 }
 
+Local<Value> parseResponse(redisReply *reply) {
+    EscapableHandleScope scope(isolate);
+    Local<Value> resp;
+    Local<Array> arr = Array::New(isolate);
+    
+    switch(reply->type) {
+    case REDIS_REPLY_NIL:
+        resp = Null(isolate);
+        break;
+    case REDIS_REPLY_INTEGER:
+        resp = Integer::New(isolate, reply->integer);
+        break;
+    case REDIS_REPLY_STATUS:
+    case REDIS_REPLY_STRING:
+        resp = String::NewFromUtf8(isolate, reply->str, v8::NewStringType::kNormal, reply->len).ToLocalChecked();
+        break;
+    case REDIS_REPLY_ARRAY:
+        for (size_t i=0; i<reply->elements; i++) {
+            arr->Set(Integer::New(isolate, i), parseResponse(reply->element[i]));
+        }
+        resp = arr;
+        break;
+    default:
+        serverLog(LL_WARNING, "Redis rotocol error, unknown type %d\n", reply->type);
+    }
+    
+    return scope.Escape(resp);
+}
+
+void RedisCall(const v8::FunctionCallbackInfo<v8::Value>& args) {
+    printf("RedisCall %d args\n", args.Length());
+    client *c = server.v8_client;
+    sds reply = NULL;
+    struct redisCommand *cmd;
+    static robj **argv = NULL;
+    static int argv_size = 0;
+    int argc = args.Length();
+    redisReader *reader = redisReaderCreate();
+    redisReply *parsedResponse = NULL;
+    v8::Handle<v8::Value> ret_value;
+    int call_flags = CMD_CALL_SLOWLOG | CMD_CALL_STATS;
+    
+    if (argv_size < argc) {
+        argv = (robj **)zrealloc(argv,sizeof(robj*)*argc);
+        argv_size = argc;
+    }
+    
+    for (int i = 0; i < args.Length(); i++) {
+        v8::HandleScope handle_scope(args.GetIsolate());
+        v8::String::Utf8Value str( args[i]->ToString() );
+        argv[i] = createStringObject(*str, str.length());
+    }
+    
+    c->argv = argv;
+    c->argc = argc;
+    
+    cmd = lookupCommand((sds)argv[0]->ptr);
+    
+    if (!cmd || ((cmd->arity > 0 && cmd->arity != argc) ||
+                   (argc < -cmd->arity)))
+    {
+        if (cmd) {
+            args.GetReturnValue().Set(Exception::Error(
+                v8::String::NewFromUtf8(isolate, "Wrong number of args calling Redis command From Lua script", v8::NewStringType::kNormal).ToLocalChecked()
+            ));
+        }
+        else {
+            args.GetReturnValue().Set(Exception::Error(
+                v8::String::NewFromUtf8(isolate, "Unknown Redis command called from Lua script", v8::NewStringType::kNormal).ToLocalChecked()
+            ));
+        }
+        goto cleanup;
+    }
+    
+    c->cmd = c->lastcmd = cmd;
+    
+    if (cmd->flags & CMD_NOSCRIPT) {
+        args.GetReturnValue().Set(Exception::Error(
+            v8::String::NewFromUtf8(isolate, "This Redis command is not allowed from scripts", v8::NewStringType::kNormal).ToLocalChecked()
+        ));
+        goto cleanup;
+    }
+    
+    call(c,call_flags);
+    
+    //process reply
+    
+    reply = sdsnewlen(c->buf,c->bufpos);
+    c->bufpos = 0;
+    while(listLength(c->reply)) {
+        sds o = (sds)listNodeValue(listFirst(c->reply));
+        reply = sdscatsds(reply,o);
+        listDelNode(c->reply,listFirst(c->reply));
+    }
+    
+    //printf("reply: `%s`\n", reply);
+    
+    redisReaderFeed(reader, reply, sdslen(reply));
+    redisReaderGetReply(reader, (void**)&parsedResponse);
+    
+    if(parsedResponse->type == REDIS_REPLY_ERROR) {
+        serverLog(LL_WARNING, "reply error %s", parsedResponse->str);
+        args.GetReturnValue().Set(Exception::Error(
+            v8::String::NewFromUtf8(isolate, parsedResponse->str, v8::NewStringType::kNormal, parsedResponse->len).ToLocalChecked()
+        ));
+        goto cleanup;
+    } else {
+        ret_value = parseResponse(parsedResponse);
+    }
+    
+    args.GetReturnValue().Set(ret_value);
+    
+cleanup:
+    redisReaderFree(reader);
+    for (int j = 0; j < c->argc; j++) {
+        robj *o = c->argv[j];
+        decrRefCount(o);
+    }
+
+    if (c->argv != argv) {
+        zfree(c->argv);
+        argv = NULL;
+        argv_size = 0;
+    }
+    
+    if(reply) sdsfree(reply);
+}
+
 void initV8() {
     // Initialize V8.
     V8::InitializeICU();
@@ -70,10 +199,18 @@ void jsEvalCommand(client *c) {
     Isolate::Scope isolate_scope(isolate);
     HandleScope handle_scope(isolate);
     
+    server.v8_caller = c;
+    server.v8_time_start = mstime();
+    
     v8::Local<v8::ObjectTemplate> global = v8::ObjectTemplate::New(isolate);
     global->Set(
         v8::String::NewFromUtf8(isolate, "Hello", v8::NewStringType::kNormal).ToLocalChecked(),
         v8::FunctionTemplate::New(isolate, Hello)
+    );
+    
+    global->Set(
+        v8::String::NewFromUtf8(isolate, "RedisCall", v8::NewStringType::kNormal).ToLocalChecked(),
+        v8::FunctionTemplate::New(isolate, RedisCall)
     );
     
     Local<Context> context = Context::New(isolate, NULL, global);
