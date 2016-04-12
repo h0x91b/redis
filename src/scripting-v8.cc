@@ -28,20 +28,13 @@ class ArrayBufferAllocator : public v8::ArrayBuffer::Allocator {
     virtual void Free(void* data, size_t) { zfree(data); }
 };
 
-void Hello(const v8::FunctionCallbackInfo<v8::Value>& args) {
-    bool first = true;
+void redisLog(const v8::FunctionCallbackInfo<v8::Value>& args) {
+    serverLog(LL_NOTICE, "V8 redisLog()");
     for (int i = 0; i < args.Length(); i++) {
         v8::HandleScope handle_scope(args.GetIsolate());
-        if (first) {
-            first = false;
-        } else {
-            printf(" ");
-        }
         v8::String::Utf8Value str( args[i]->ToString() );
-        printf("%s", *str);
+        serverLogRaw(LL_NOTICE, *str);
     }
-    printf("\n");
-    fflush(stdout);
 }
 
 Local<Value> parseResponse(redisReply *reply) {
@@ -73,8 +66,8 @@ Local<Value> parseResponse(redisReply *reply) {
     return scope.Escape(resp);
 }
 
-void RedisCall(const v8::FunctionCallbackInfo<v8::Value>& args) {
-    //printf("RedisCall %d args\n", args.Length());
+void redisCall(const v8::FunctionCallbackInfo<v8::Value>& args) {
+    //printf("redisCall %d args\n", args.Length());
     HandleScope handle_scope(isolate);
     client *c = server.v8_client;
     sds reply = NULL;
@@ -84,7 +77,7 @@ void RedisCall(const v8::FunctionCallbackInfo<v8::Value>& args) {
     static int argv_size = 0;
     int argc = args.Length();
     redisReader *reader = redisReaderCreate();
-    redisReply *parsedResponse = NULL;
+    redisReply *redisReaderResponse = NULL;
     v8::Handle<v8::Value> ret_value;
     int call_flags = CMD_CALL_SLOWLOG | CMD_CALL_STATS;
     
@@ -174,23 +167,23 @@ void RedisCall(const v8::FunctionCallbackInfo<v8::Value>& args) {
     //printf("reply: `%s`\n", reply);
     
     redisReaderFeed(reader, reply, reply_len);
-    redisReaderGetReply(reader, (void**)&parsedResponse);
+    redisReaderGetReply(reader, (void**)&redisReaderResponse);
     
-    if(parsedResponse->type == REDIS_REPLY_ERROR) {
-        serverLog(LL_WARNING, "reply error %s", parsedResponse->str);
+    if(redisReaderResponse->type == REDIS_REPLY_ERROR) {
+        serverLog(LL_WARNING, "reply error %s", redisReaderResponse->str);
         args.GetReturnValue().Set(Exception::Error(
-            v8::String::NewFromUtf8(isolate, parsedResponse->str, v8::NewStringType::kNormal, parsedResponse->len).ToLocalChecked()
+            v8::String::NewFromUtf8(isolate, redisReaderResponse->str, v8::NewStringType::kNormal, redisReaderResponse->len).ToLocalChecked()
         ));
         goto cleanup;
     } else {
-        ret_value = parseResponse(parsedResponse);
+        ret_value = parseResponse(redisReaderResponse);
     }
     
     args.GetReturnValue().Set(ret_value);
     
 cleanup:
-    if(parsedResponse != NULL)
-        freeReplyObject(parsedResponse);
+    if(redisReaderResponse != NULL)
+        freeReplyObject(redisReaderResponse);
     redisReaderFree(reader);
     for (int j = 0; j < c->argc; j++) {
         robj *o = c->argv[j];
@@ -240,13 +233,13 @@ void jsEvalCommand(client *c) {
     
     v8::Local<v8::ObjectTemplate> global = v8::ObjectTemplate::New(isolate);
     global->Set(
-        v8::String::NewFromUtf8(isolate, "Hello", v8::NewStringType::kNormal).ToLocalChecked(),
-        v8::FunctionTemplate::New(isolate, Hello)
+        v8::String::NewFromUtf8(isolate, "log", v8::NewStringType::kNormal).ToLocalChecked(),
+        v8::FunctionTemplate::New(isolate, redisLog)
     );
     
     global->Set(
-        v8::String::NewFromUtf8(isolate, "RedisCall", v8::NewStringType::kNormal).ToLocalChecked(),
-        v8::FunctionTemplate::New(isolate, RedisCall)
+        v8::String::NewFromUtf8(isolate, "redisCall", v8::NewStringType::kNormal).ToLocalChecked(),
+        v8::FunctionTemplate::New(isolate, redisCall)
     );
     
     Local<Context> context = Context::New(isolate, NULL, global);
