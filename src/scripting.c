@@ -897,7 +897,9 @@ void scriptingInit(int setup) {
 
     if (setup) {
         server.lua_client = NULL;
+        server.v8_client = NULL;
         server.lua_caller = NULL;
+        server.v8_caller = NULL;
         server.lua_timedout = 0;
         server.lua_always_replicate_commands = 0; /* Only DEBUG can change it.*/
         server.lua_time_limit = LUA_SCRIPT_TIME_LIMIT;
@@ -1051,6 +1053,11 @@ void scriptingInit(int setup) {
     if (server.lua_client == NULL) {
         server.lua_client = createClient(-1);
         server.lua_client->flags |= CLIENT_LUA;
+    }
+    
+    if (server.v8_client == NULL) {
+        server.v8_client = createClient(-1);
+        server.v8_client->flags |= CLIENT_LUA;
     }
 
     /* Lua beginners often don't use "local", this is likely to introduce
