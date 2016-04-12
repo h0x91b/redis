@@ -73,9 +73,11 @@ Local<Value> parseResponse(redisReply *reply) {
 }
 
 void RedisCall(const v8::FunctionCallbackInfo<v8::Value>& args) {
-    printf("RedisCall %d args\n", args.Length());
+    //printf("RedisCall %d args\n", args.Length());
+    HandleScope handle_scope(isolate);
     client *c = server.v8_client;
     sds reply = NULL;
+    int reply_len = 0;
     struct redisCommand *cmd;
     static robj **argv = NULL;
     static int argv_size = 0;
@@ -91,13 +93,30 @@ void RedisCall(const v8::FunctionCallbackInfo<v8::Value>& args) {
     }
     
     for (int i = 0; i < args.Length(); i++) {
-        v8::HandleScope handle_scope(args.GetIsolate());
+        v8::HandleScope handle_scope(isolate);
         v8::String::Utf8Value str( args[i]->ToString() );
         argv[i] = createStringObject(*str, str.length());
     }
     
     c->argv = argv;
     c->argc = argc;
+    
+    // /* If this is a Redis Cluster node, we need to make sure Lua is not
+    // * trying to access non-local keys, with the exception of commands
+    // * received from our master. */
+    // if (server.cluster_enabled && !(server.lua_caller->flags & CLIENT_MASTER)) {
+    //    /* Duplicate relevant flags in the lua client. */
+    //    c->flags &= ~(CLIENT_READONLY|CLIENT_ASKING);
+    //    c->flags |= server.lua_caller->flags & (CLIENT_READONLY|CLIENT_ASKING);
+    //    if (getNodeByQuery(c,c->cmd,c->argv,c->argc,NULL,NULL) !=
+    //                       server.cluster->myself)
+    //    {
+    //        luaPushError(lua,
+    //            "Lua script attempted to access a non local key in a "
+    //            "cluster node");
+    //        goto cleanup;
+    //    }
+    // }
     
     cmd = lookupCommand((sds)argv[0]->ptr);
     
@@ -126,21 +145,34 @@ void RedisCall(const v8::FunctionCallbackInfo<v8::Value>& args) {
         goto cleanup;
     }
     
-    call(c,call_flags);
+    call(c, call_flags);
     
-    //process reply
-    
-    reply = sdsnewlen(c->buf,c->bufpos);
-    c->bufpos = 0;
-    while(listLength(c->reply)) {
-        sds o = (sds)listNodeValue(listFirst(c->reply));
-        reply = sdscatsds(reply,o);
-        listDelNode(c->reply,listFirst(c->reply));
+    /* Convert the result of the Redis command into a suitable Lua type.
+    * The first thing we need is to create a single string from the client
+    * output buffers. */
+    if (listLength(c->reply) == 0 && c->bufpos < PROTO_REPLY_CHUNK_BYTES) {
+       /* This is a fast path for the common case of a reply inside the
+        * client static buffer. Don't create an SDS string but just use
+        * the client buffer directly. */
+        reply_len = c->bufpos;
+        c->buf[c->bufpos] = '\0';
+        reply = c->buf;
+        c->bufpos = 0;
+    } else {
+        reply_len = c->bufpos;
+        reply = sdsnewlen(c->buf,c->bufpos);
+        c->bufpos = 0;
+        while(listLength(c->reply)) {
+            sds o = (sds)listNodeValue(listFirst(c->reply));
+            reply_len += sdslen(o);
+            reply = sdscatsds(reply,o);
+            listDelNode(c->reply,listFirst(c->reply));
+        }
     }
     
     //printf("reply: `%s`\n", reply);
     
-    redisReaderFeed(reader, reply, sdslen(reply));
+    redisReaderFeed(reader, reply, reply_len);
     redisReaderGetReply(reader, (void**)&parsedResponse);
     
     if(parsedResponse->type == REDIS_REPLY_ERROR) {
@@ -156,6 +188,8 @@ void RedisCall(const v8::FunctionCallbackInfo<v8::Value>& args) {
     args.GetReturnValue().Set(ret_value);
     
 cleanup:
+    if(parsedResponse != NULL)
+        freeReplyObject(parsedResponse);
     redisReaderFree(reader);
     for (int j = 0; j < c->argc; j++) {
         robj *o = c->argv[j];
@@ -168,7 +202,8 @@ cleanup:
         argv_size = 0;
     }
     
-    if(reply) sdsfree(reply);
+    if(reply != NULL && reply != c->buf)
+        sdsfree(reply);
 }
 
 void initV8() {
