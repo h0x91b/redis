@@ -1,6 +1,7 @@
 #include "scripting-v8.h"
 extern "C" {
     #include "server.h"
+    #include "cluster.h"
 }
 
 #include <stdio.h>
@@ -101,22 +102,22 @@ void RedisCall(const v8::FunctionCallbackInfo<v8::Value>& args) {
     c->argv = argv;
     c->argc = argc;
     
-    // /* If this is a Redis Cluster node, we need to make sure Lua is not
-    // * trying to access non-local keys, with the exception of commands
-    // * received from our master. */
-    // if (server.cluster_enabled && !(server.lua_caller->flags & CLIENT_MASTER)) {
-    //    /* Duplicate relevant flags in the lua client. */
-    //    c->flags &= ~(CLIENT_READONLY|CLIENT_ASKING);
-    //    c->flags |= server.lua_caller->flags & (CLIENT_READONLY|CLIENT_ASKING);
-    //    if (getNodeByQuery(c,c->cmd,c->argv,c->argc,NULL,NULL) !=
-    //                       server.cluster->myself)
-    //    {
-    //        luaPushError(lua,
-    //            "Lua script attempted to access a non local key in a "
-    //            "cluster node");
-    //        goto cleanup;
-    //    }
-    // }
+    /* If this is a Redis Cluster node, we need to make sure Lua is not
+    * trying to access non-local keys, with the exception of commands
+    * received from our master. */
+    if (server.cluster_enabled && !(server.v8_caller->flags & CLIENT_MASTER)) {
+       /* Duplicate relevant flags in the lua client. */
+       c->flags &= ~(CLIENT_READONLY|CLIENT_ASKING);
+       c->flags |= server.v8_caller->flags & (CLIENT_READONLY|CLIENT_ASKING);
+       if (getNodeByQuery(c,c->cmd,c->argv,c->argc,NULL,NULL) !=
+                          server.cluster->myself)
+       {
+           args.GetReturnValue().Set(Exception::Error(
+               v8::String::NewFromUtf8(isolate, "Lua script attempted to access a non local key in a cluster node", v8::NewStringType::kNormal).ToLocalChecked()
+           ));
+           goto cleanup;
+       }
+    }
     
     cmd = lookupCommand((sds)argv[0]->ptr);
     

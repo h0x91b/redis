@@ -216,7 +216,7 @@ $(REDIS_CHECK_AOF_NAME): $(REDIS_CHECK_AOF_OBJ)
 	$(REDIS_CC) -std=c99 -c $<
 
 %.o: %.cc .make-prerequisites
-	$(REDIS_CXX) -Wc++11-extensions -c $<
+	$(REDIS_CXX) -std=c++11 -Wno-unused-parameter -Wno-c99-extensions -c $<
 
 clean:
 	rm -rf $(REDIS_SERVER_NAME) $(REDIS_SENTINEL_NAME) $(REDIS_CLI_NAME) $(REDIS_BENCHMARK_NAME) $(REDIS_CHECK_RDB_NAME) $(REDIS_CHECK_AOF_NAME) *.o *.gcda *.gcno *.gcov redis.info lcov-html Makefile.dep
