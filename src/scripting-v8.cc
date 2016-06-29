@@ -2,6 +2,7 @@
 extern "C" {
     #include "server.h"
     #include "cluster.h"
+    #include "http_parser.h"
 }
 
 #include <stdio.h>
@@ -200,6 +201,261 @@ cleanup:
         sdsfree(reply);
 }
 
+const unsigned short httpPort = 9500;
+const unsigned int tcpBacklog = 512;
+const size_t MAX_HEADERS = 64;
+char neterrbuf[256];
+int httpServer;
+#define MAX_ACCEPTS_PER_CALL 1000
+
+enum HttpConnection {
+    HttpConnectionKeepAlive,
+    HttpConnectionClose
+};
+
+struct HttpHeader {
+    sds field;
+    sds value;
+};
+
+struct HttpContext {
+    int fd;
+    int method;
+    HttpConnection connection;
+    http_parser *parser;
+    size_t contentLength;
+    sds url;
+    sds body;
+    size_t headerLen;
+    HttpHeader **headers;
+};
+
+void httpRequestHandler(aeEventLoop *el, int fd, void *privdata, int mask);
+void freeHttpClient(HttpContext *c);
+
+void httpWriteResponse(aeEventLoop *el, int fd, void *privdata, int mask) {
+    serverLog(LL_VERBOSE, "httpWriteResponse");
+    HttpContext *c = (HttpContext*)privdata;
+    static const char resp[] = "HTTP/1.1 200 OK\r\nServer: Redis-v8\r\nContent-Type: application\\json\r\nConnection: Keep-Alive\r\nContent-Length: 7\r\n\r\n\"hello\"";
+    if(write(fd, resp, sizeof(resp) - 1) == sizeof(resp) - 1) {
+        aeDeleteFileEvent(server.el, fd, AE_WRITABLE);
+        
+        if(c->connection == HttpConnectionClose) {
+            freeHttpClient(c);
+            return;
+        }
+        
+        if (aeCreateFileEvent(server.el, fd, AE_READABLE,
+            httpRequestHandler, (void*)c) == AE_ERR)
+        {
+            serverLog(LL_WARNING,"aeCreateFileEvent error");
+            freeHttpClient(c);
+            return;
+        }
+    }
+}
+
+int onHeadersComplete(http_parser *parser) {
+    serverLog(LL_VERBOSE,"onHeadersComplete method: %d %d HTTP/%d.%d Content-Length: %llu", parser->method, HTTP_GET, parser->http_major, parser->http_minor, parser->content_length);
+    HttpContext *c = (HttpContext*)parser->data;
+    c->contentLength = parser->content_length;
+    c->method = parser->method;
+    return 0;
+}
+
+int onMessageComplete(http_parser *parser) {
+    serverLog(LL_VERBOSE,"onMessageComplete");
+    HttpContext *c = (HttpContext*)parser->data;
+    
+    serverLog(LL_VERBOSE,"url: %s", c->url);
+    if(c->body) {
+        serverLog(LL_VERBOSE,"body: %s", c->body);
+    }
+    
+    for(size_t i=0;i<c->headerLen;i++) {
+        serverLog(LL_VERBOSE,"Header: %s=%s", c->headers[i]->field, c->headers[i]->value);
+    }
+    
+    aeDeleteFileEvent(server.el, c->fd, AE_READABLE);
+    
+    if (aeCreateFileEvent(server.el, c->fd, AE_WRITABLE, httpWriteResponse, (void*)c) == AE_ERR)
+    {
+        aeDeleteFileEvent(server.el, c->fd, AE_READABLE);
+        freeHttpClient(c);
+    }
+    return 0;
+}
+
+bool nextValueConnection;
+
+int onHeaderValue(http_parser *parser, const char *at, size_t length) {
+    serverLog(LL_VERBOSE,"onHeaderValue `%.*s`", (int)length, at);
+    HttpContext *c = (HttpContext*)parser->data;
+    if(c->headerLen < MAX_HEADERS) {
+        c->headers[c->headerLen]->value = sdsnewlen(at, length);
+        c->headerLen++;
+    }
+    if(nextValueConnection) {
+        nextValueConnection = FALSE;
+        if(length == 5 && !strncmp(at, "close", 5)) {
+            c->connection = HttpConnectionClose;
+        }
+    }
+    return 0;
+}
+
+int onHeaderField(http_parser *parser, const char *at, size_t length) {
+    serverLog(LL_VERBOSE,"onHeaderField `%.*s`", (int)length, at);
+    HttpContext *c = (HttpContext*)parser->data;
+    if(c->headerLen < MAX_HEADERS) {
+        c->headers[c->headerLen] = (HttpHeader*)zcalloc(sizeof(HttpHeader*));
+        c->headers[c->headerLen]->field = sdsnewlen(at, length);
+    }
+    if(length == 10) {
+        if(at[0] != 'C' && at[0] != 'c') return 0;
+        if(!strncmp(at+1,"onnection",9)) {
+            nextValueConnection = TRUE;
+        }
+    }
+    return 0;
+}
+
+int onUrl(http_parser *parser, const char *at, size_t length) {
+    serverLog(LL_VERBOSE,"onUrl `%.*s`", (int)length, at);
+    HttpContext *c = (HttpContext*)parser->data;
+    c->url = sdsnewlen(at, length);
+    return 0;
+}
+
+int onBody(http_parser *parser, const char *at, size_t length) {
+    HttpContext *c = (HttpContext*)parser->data;
+    serverLog(LL_VERBOSE,"onBody (content-length: %zu) `%.*s`", c->contentLength, (int)length, at);
+    if(!c->body) {
+        c->body = sdsempty();
+        if(c->contentLength) {
+            c->body = sdsMakeRoomFor(c->body, c->contentLength);
+        }
+    }
+    c->body = sdscatlen(c->body, at, length);
+    return 0;
+}
+
+void httpRequestHandler(aeEventLoop *el, int fd, void *privdata, int mask) {
+    serverLog(LL_VERBOSE,"httpRequestHandler");
+    http_parser_settings settings;
+    http_parser_settings_init(&settings);
+    settings.on_headers_complete = onHeadersComplete;
+    settings.on_url = onUrl;
+    settings.on_header_field = onHeaderField;
+    settings.on_header_value = onHeaderValue;
+    settings.on_body = onBody;
+    settings.on_message_complete = onMessageComplete;
+    HttpContext *c = (HttpContext*)privdata;
+    char buf[4096];
+    int nread = read(fd, buf, 4096);
+    if(nread == 0) {
+        serverLog(LL_VERBOSE, "Client closed connection");
+        aeDeleteFileEvent(server.el, fd, AE_READABLE);
+        freeHttpClient(c);
+        return;
+    }
+    if(nread < 0) {
+        if (errno == EAGAIN) {
+            return;
+        }
+        if(errno == ECONNRESET) {
+            serverLog(LL_VERBOSE,"Connection reset by peer");
+            aeDeleteFileEvent(server.el, fd, AE_READABLE);
+            freeHttpClient(c);
+            return;
+        }
+        serverLog(LL_WARNING,"error read %d %s", errno, strerror(errno));
+        aeDeleteFileEvent(server.el, fd, AE_READABLE);
+        freeHttpClient(c);
+        return;
+    }
+    serverLog(LL_VERBOSE,"readed %d bytes %.*s", nread, nread, buf);
+    nextValueConnection = FALSE;
+    int nparsed = http_parser_execute(c->parser, &settings, buf, nread);
+    serverLog(LL_VERBOSE,"nparsed %d bytes", nparsed);
+}
+
+HttpContext *allocHttpClient(int fd) {
+    serverLog(LL_VERBOSE,"allocHttpClient");
+    HttpContext *c = (HttpContext*)zcalloc(sizeof(HttpContext));
+    c->fd = fd;
+    http_parser *parser = (http_parser*)zmalloc(sizeof(http_parser));
+    http_parser_init(parser, HTTP_REQUEST);
+    parser->data = (void*)c;
+    c->parser = parser;
+    c->connection = HttpConnectionKeepAlive;
+    c->headers = (HttpHeader**)zcalloc(sizeof(HttpHeader*) * MAX_HEADERS);
+    return c;
+}
+
+void freeHttpClient(HttpContext *c) {
+    serverLog(LL_VERBOSE,"freeHttpClient");
+    if(c->fd) close(c->fd);
+    if(c->parser) zfree(c->parser);
+    if(c->body) sdsfree(c->body);
+    if(c->url) sdsfree(c->url);
+    for(size_t i=0;i<c->headerLen;i++) {
+        sdsfree(c->headers[i]->field);
+        sdsfree(c->headers[i]->value);
+        zfree(c->headers[i]);
+    }
+    zfree(c->headers);
+    zfree(c);
+}
+
+void httpAcceptHandler(aeEventLoop *el, int fd, void *privdata, int mask) {
+    serverLog(LL_VERBOSE,"httpAcceptHandler");
+    int cport, cfd, max = MAX_ACCEPTS_PER_CALL;
+    char cip[NET_IP_STR_LEN];
+    UNUSED(el);
+    UNUSED(mask);
+    UNUSED(privdata);
+
+    while(max--) {
+        cfd = anetTcpAccept(server.neterr, fd, cip, sizeof(cip), &cport);
+        if (cfd == ANET_ERR) {
+            if (errno != EWOULDBLOCK)
+                serverLog(LL_WARNING,
+                    "Accepting client connection: %s", server.neterr);
+            return;
+        }
+        serverLog(LL_VERBOSE,"Accepted %s:%d", cip, cport);
+        
+        anetNonBlock(NULL,fd);
+        anetEnableTcpNoDelay(NULL,fd);
+        if(TRUE) {
+            anetKeepAlive(NULL,fd,server.tcpkeepalive);
+        }
+        
+        HttpContext *c = allocHttpClient(cfd);
+        
+        if (aeCreateFileEvent(server.el, cfd, AE_READABLE,
+            httpRequestHandler, (void*)c) == AE_ERR)
+        {
+            freeHttpClient(c);
+            return;
+        }
+        return;
+    }
+}
+
+void initHttp() {
+    serverLog(LL_WARNING,"Init HTTP");
+    httpServer = anetTcpServer(neterrbuf, httpPort, NULL, tcpBacklog);
+    anetNonBlock(NULL, httpServer);
+    if (aeCreateFileEvent(server.el, httpServer, AE_READABLE, httpAcceptHandler, NULL) == AE_ERR)
+    {
+        serverPanic(
+            "Unrecoverable error creating server.ipfd file event.");
+    }
+    serverLog(LL_WARNING,"HTTP initialized on port %d", httpPort);
+}
+
 void initV8() {
     // Initialize V8.
     V8::InitializeICU();
@@ -213,6 +469,7 @@ void initV8() {
     create_params.array_buffer_allocator = &allocator;
     isolate = Isolate::New(create_params);
     serverLog(LL_WARNING,"V8 initialized");
+    initHttp();
 }
 
 void shutdownV8() {
