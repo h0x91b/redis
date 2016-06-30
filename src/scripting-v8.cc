@@ -208,6 +208,7 @@ const size_t MAX_HEADERS = 64;
 char neterrbuf[256];
 int httpServer;
 #define MAX_ACCEPTS_PER_CALL 1000
+#define DEVELOPER
 
 enum HttpConnection {
     HttpConnectionKeepAlive,
@@ -254,7 +255,7 @@ void httpWriteResponse(aeEventLoop *el, int fd, void *privdata, int mask) {
     resp[0] = '\0';
     sdsupdatelen(resp);
     
-    resp = sdscatprintf(resp, "HTTP/1.1 %sK\r\nServer: Redis-v8\r\nContent-Type: application\\json\r\nConnection: Keep-Alive\r\nContent-Length: %zu\r\n\r\n%s", c->status, sdslen(c->response), c->response);
+    resp = sdscatprintf(resp, "HTTP/1.1 %s\r\nServer: Redis-v8\r\nContent-Type: application\\json\r\nConnection: Keep-Alive\r\nContent-Length: %zu\r\n\r\n%s", c->status, sdslen(c->response), c->response);
     
     if(write(fd, resp, sdslen(resp)) > 0) {
         aeDeleteFileEvent(server.el, fd, AE_WRITABLE);
@@ -291,6 +292,84 @@ void httpResponseReady(HttpContext *c) {
     }
 }
 
+inline void httpPrepareResponse(HttpContext *c, sds status, sds response) {
+    if(c->status) sdsfree(c->status);
+    c->status = status;
+    if(c->response) sdsfree(c->response);
+    c->response = response;
+}
+
+void httpResponse404(HttpContext *c) {
+    httpPrepareResponse(c, sdsnew("404 Not Found"), sdsnew("{\"Error\":\"Not found\",\"Code\":404}"));
+    httpResponseReady(c);
+}
+
+void httpAdminEvalCommand(HttpContext *c) {
+#ifdef DEVELOPER
+    serverLog(LL_VERBOSE,"httpAdminEvalCommand");
+#endif
+    if(c->method != HTTP_POST) {
+        httpPrepareResponse(c, sdsnew("400 Bad request"), sdsnew("{\"Error\":\"400 Bad Request\",\"Code\":400,\"Data\":\"Wrong request method\"}"));
+        httpResponseReady(c);
+        return;
+    }
+    
+    Isolate::Scope isolate_scope(isolate);
+    HandleScope handle_scope(isolate);
+    
+//    server.v8_caller = c;
+//    server.v8_time_start = mstime();
+//    
+    v8::Local<v8::ObjectTemplate> global = v8::ObjectTemplate::New(isolate);
+//    global->Set(
+//                v8::String::NewFromUtf8(isolate, "log", v8::NewStringType::kNormal).ToLocalChecked(),
+//                v8::FunctionTemplate::New(isolate, redisLog)
+//                );
+//    
+//    global->Set(
+//                v8::String::NewFromUtf8(isolate, "redisCall", v8::NewStringType::kNormal).ToLocalChecked(),
+//                v8::FunctionTemplate::New(isolate, redisCall)
+//                );
+    
+    Local<Context> context = Context::New(isolate, NULL, global);
+    Context::Scope context_scope(context);
+    
+    static sds code = sdsnewlen("\0", 65536);
+    code[0] = '\0';
+    sdsupdatelen(code);
+    code = sdscatprintf(code, "function userFunc() { %s } JSON.stringify({Error: null, Data: userFunc()});", c->body);
+    Local<String> source = String::NewFromUtf8(
+                                               isolate,
+                                               code,
+                                               NewStringType::kNormal,
+                                               sdslen(code)
+                                               ).ToLocalChecked();
+    TryCatch trycatch(isolate);
+    Local<Script> script;
+
+    if(!Script::Compile(context, source).ToLocal(&script)) {
+        String::Utf8Value error(trycatch.Exception());
+        serverLog(LL_WARNING, "JS Compile exception %s\n", *error);
+        httpPrepareResponse(c, sdsnew("503 Service Unavailable"), sdsnew(*error));
+        httpResponseReady(c);
+        return;
+    }
+    Local<Value> result;
+    if(!script->Run(context).ToLocal(&result)) {
+        String::Utf8Value error(trycatch.Exception());
+        serverLog(LL_WARNING, "JS Runtime exception %s\n", *error);
+        httpPrepareResponse(c, sdsnew("503 Service Unavailable"), sdsnew(*error));
+        httpResponseReady(c);
+        return;
+    }
+    
+    String::Utf8Value utf8(result);
+
+    
+    httpPrepareResponse(c, sdsnew("200 OK"), sdsnewlen(*utf8, utf8.length()));
+    httpResponseReady(c);
+}
+
 int onMessageComplete(http_parser *parser) {
     HttpContext *c = (HttpContext*)parser->data;
 
@@ -310,18 +389,15 @@ int onMessageComplete(http_parser *parser) {
     aeDeleteFileEvent(server.el, c->fd, AE_READABLE);
     
     if(!c->path) {
-        if(c->status) sdsfree(c->status);
-        c->status = sdsnew("404 Not Found");
-        if(c->response) sdsfree(c->response);
-        c->response = sdsnew("{\"Error\":\"Not found\", \"Code\": 404}");
-        httpResponseReady(c);
+        httpResponse404(c);
         return 0;
     }
-    if(c->status) sdsfree(c->status);
-    c->status = sdsnew("200 OK");
-    if(c->response) sdsfree(c->response);
-    c->response = sdsnew("{\"Error\":null,\"Data\":null}");
-    httpResponseReady(c);
+    if(sdslen(c->path) == 8 && !strncmp(c->path, "/_f/eval", 8)) {
+        httpAdminEvalCommand(c);
+        return 0;
+    }
+    
+    httpResponse404(c);
     
     return 0;
 }
@@ -381,7 +457,11 @@ void parseUri(HttpContext *c) {
     int result = http_parser_parse_url(c->uri, sdslen(c->uri), 0, &parser_url);
     if (result != 0) {
         serverLog(LL_WARNING,"http_parser_parse_url error");
-        // 400 response
+        if(c->status) sdsfree(c->status);
+        c->status = sdsnew("400 Bad Request");
+        if(c->response) sdsfree(c->response);
+        c->response = sdsnew("{\"Error\":\"400 Bad Request\",\"Code\":400}");
+        httpResponseReady(c);
         return;
     }
     
