@@ -84,5 +84,4 @@ jemalloc: .make-prerequisites
 .PHONY: jemalloc
 
 v8:
-	export PATH=depot_tools:$$PATH; echo $$PATH;fetch --no-history v8 && cd v8 && make x64.release library=shared OUTDIR=out snapshot=off -j 8
-	
+	export PATH=depot_tools:$$PATH; echo $$PATH;fetch --no-history v8 && cd v8 && make x64.release OUTDIR=out snapshot=off -j 8

@@ -58,7 +58,7 @@ FINAL_CFLAGS=$(STD) $(WARN) $(OPT) $(DEBUG) $(CFLAGS) $(REDIS_CFLAGS)
 FINAL_CXXFLAGS=$(STD) $(WARN) $(OPT) $(DEBUG) $(CFLAGS) $(REDIS_CFLAGS) -I../deps/v8/include/ -Wc++11-long-long -Wc99-extensions
 FINAL_LDFLAGS=$(LDFLAGS) $(REDIS_LDFLAGS) $(DEBUG) -framework CoreFoundation
 #FINAL_LIBS=-lm -stdlib=libstdc++ ../deps/v8/out/x64.release/{libv8_{base,libbase,libplatform,nosnapshot},libicu{i18n,uc,data}}.a
-FINAL_LIBS=-lm -stdlib=libc++ -L../deps/v8/out/x64.release/ -lv8 -licuuc -licui18n ../deps/v8/out/x64.release/libv8_{base,libbase,libplatform,nosnapshot}.a
+FINAL_LIBS=-lm -stdlib=libc++ -L../deps/v8/out/x64.release/ ../deps/v8/out/x64.release/{libv8_{base,libbase,libplatform,libsampler,nosnapshot},libicu{i18n,uc}}.a
 DEBUG=-g -ggdb
 
 ifeq ($(uname_S),SunOS)

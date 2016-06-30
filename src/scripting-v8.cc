@@ -19,6 +19,9 @@ using namespace v8;
 v8::Platform* platform;
 sds wrapped_script;
 Isolate* isolate;
+Global<Context> context_;
+class ArrayBufferAllocator;
+ArrayBufferAllocator *allocator;
 
 class ArrayBufferAllocator : public v8::ArrayBuffer::Allocator {
  public:
@@ -26,8 +29,12 @@ class ArrayBufferAllocator : public v8::ArrayBuffer::Allocator {
         void* data = AllocateUninitialized(length);
         return data == NULL ? data : memset(data, 0, length);
     }
-    virtual void* AllocateUninitialized(size_t length) { return zmalloc(length); }
-    virtual void Free(void* data, size_t) { zfree(data); }
+    virtual void* AllocateUninitialized(size_t length) {
+        return zmalloc(length);
+    }
+    virtual void Free(void* data, size_t) {
+        zfree(data);
+    }
 };
 
 void redisLog(const v8::FunctionCallbackInfo<v8::Value>& args) {
@@ -208,7 +215,7 @@ const size_t MAX_HEADERS = 64;
 char neterrbuf[256];
 int httpServer;
 #define MAX_ACCEPTS_PER_CALL 1000
-#define DEVELOPER
+//#define DEVELOPER
 
 enum HttpConnection {
     HttpConnectionKeepAlive,
@@ -297,6 +304,9 @@ inline void httpPrepareResponse(HttpContext *c, sds status, sds response) {
     c->status = status;
     if(c->response) sdsfree(c->response);
     c->response = response;
+#ifdef DEVELOPER
+    serverLog(LL_VERBOSE,"httpPrepareResponse status %s, response %s", c->status, c->response);
+#endif
 }
 
 void httpResponse404(HttpContext *c) {
@@ -317,27 +327,30 @@ void httpAdminEvalCommand(HttpContext *c) {
     Isolate::Scope isolate_scope(isolate);
     HandleScope handle_scope(isolate);
     
-//    server.v8_caller = c;
-//    server.v8_time_start = mstime();
-//    
-    v8::Local<v8::ObjectTemplate> global = v8::ObjectTemplate::New(isolate);
-//    global->Set(
-//                v8::String::NewFromUtf8(isolate, "log", v8::NewStringType::kNormal).ToLocalChecked(),
-//                v8::FunctionTemplate::New(isolate, redisLog)
-//                );
-//    
-//    global->Set(
-//                v8::String::NewFromUtf8(isolate, "redisCall", v8::NewStringType::kNormal).ToLocalChecked(),
-//                v8::FunctionTemplate::New(isolate, redisCall)
-//                );
-    
-    Local<Context> context = Context::New(isolate, NULL, global);
+    //same context
+    v8::Local<v8::Context> context = v8::Local<v8::Context>::New(isolate, context_);
     Context::Scope context_scope(context);
+    
+//    //new context each execution
+//    v8::Local<v8::ObjectTemplate> global = v8::ObjectTemplate::New(isolate);
+//    
+//    Local<Context> context = Context::New(isolate, NULL, global);
+//    Context::Scope context_scope(context);
     
     static sds code = sdsnewlen("\0", 65536);
     code[0] = '\0';
     sdsupdatelen(code);
-    code = sdscatprintf(code, "function userFunc() { %s } JSON.stringify({Error: null, Data: userFunc()});", c->body);
+    
+    Local<String> jsCode = String::NewFromUtf8(isolate, c->body, NewStringType::kNormal, sdslen(c->body)).ToLocalChecked();
+    context->Global()->Set(
+                           String::NewFromUtf8(isolate, "__user_code", NewStringType::kNormal).ToLocalChecked(),
+                           jsCode
+                        );
+    code = sdscatprintf(code, "(function(){\n"
+        "\"use strict\"\n"
+        "var userFunc = new Function('\"use strict\"\\n' + __user_code);\n"
+        "return JSON.stringify({Error: null, Data: userFunc()});\n"
+    "})();", c->body);
     Local<String> source = String::NewFromUtf8(
                                                isolate,
                                                code,
@@ -349,7 +362,7 @@ void httpAdminEvalCommand(HttpContext *c) {
 
     if(!Script::Compile(context, source).ToLocal(&script)) {
         String::Utf8Value error(trycatch.Exception());
-        serverLog(LL_WARNING, "JS Compile exception %s\n", *error);
+        serverLog(LL_WARNING, "JS Compile exception %s\nCode: %s\nc->body %s", *error, code, c->body);
         httpPrepareResponse(c, sdsnew("503 Service Unavailable"), sdsnew(*error));
         httpResponseReady(c);
         return;
@@ -359,15 +372,14 @@ void httpAdminEvalCommand(HttpContext *c) {
         String::Utf8Value error(trycatch.Exception());
         serverLog(LL_WARNING, "JS Runtime exception %s\n", *error);
         httpPrepareResponse(c, sdsnew("503 Service Unavailable"), sdsnew(*error));
-        httpResponseReady(c);
+        httpResponseReady(c); 
         return;
     }
     
     String::Utf8Value utf8(result);
-
     
     httpPrepareResponse(c, sdsnew("200 OK"), sdsnewlen(*utf8, utf8.length()));
-    httpResponseReady(c);
+    httpResponseReady(c);    
 }
 
 int onMessageComplete(http_parser *parser) {
@@ -500,13 +512,16 @@ int onBody(http_parser *parser, const char *at, size_t length) {
 #ifdef DEVELOPER
     serverLog(LL_VERBOSE,"onBody (content-length: %zu) `%.*s`", c->contentLength, (int)length, at);
 #endif
+    //serverLog(LL_WARNING,"onBody (content-length: %zu) %d `%.*s`", c->contentLength, (int)length, (int)length, at);
     if(!c->body) {
         c->body = sdsempty();
         if(c->contentLength) {
             c->body = sdsMakeRoomFor(c->body, c->contentLength);
         }
     }
+    if(c->contentLength && sdslen(c->body) == c->contentLength) return 0;
     c->body = sdscatlen(c->body, at, length);
+//    serverLog(LL_WARNING,"onBody cat c->body %s length %d", c->body, sdslen(c->body));
     return 0;
 }
 
@@ -647,24 +662,38 @@ void initHttp() {
 void initV8() {
     // Initialize V8.
     V8::InitializeICU();
-    // V8::InitializeExternalStartupData("");
+    V8::InitializeExternalStartupData("");
     ::platform = v8::platform::CreateDefaultPlatform();
     V8::InitializePlatform(::platform);
     V8::Initialize();
     wrapped_script = sdsempty();
-    ArrayBufferAllocator allocator;
+    allocator = new ArrayBufferAllocator();
     Isolate::CreateParams create_params;
-    create_params.array_buffer_allocator = &allocator;
+    create_params.array_buffer_allocator = allocator;
     isolate = Isolate::New(create_params);
+    
+    Isolate::Scope isolate_scope(isolate);
+    HandleScope handle_scope(isolate);
+    
+    v8::Local<v8::ObjectTemplate> global = v8::ObjectTemplate::New(isolate);
+    global->Set(
+                v8::String::NewFromUtf8(isolate, "log", v8::NewStringType::kNormal).ToLocalChecked(),
+                v8::FunctionTemplate::New(isolate, redisLog)
+                );
+    
+    v8::Local<v8::Context> context = Context::New(isolate, NULL, global);
+    context_.Reset(isolate, context);
     serverLog(LL_WARNING,"V8 initialized");
     initHttp();
 }
 
 void shutdownV8() {
+    context_.Reset();
     isolate->Dispose();
     V8::Dispose();
     V8::ShutdownPlatform();
     delete ::platform;
+    delete allocator;
     sdsfree(wrapped_script);
     serverLog(LL_WARNING,"V8 destroyed");
 }
