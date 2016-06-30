@@ -20,6 +20,7 @@ v8::Platform* platform;
 sds wrapped_script;
 Isolate* isolate;
 Global<Context> context_;
+Global<Function> __adminEval;
 class ArrayBufferAllocator;
 ArrayBufferAllocator *allocator;
 
@@ -337,42 +338,66 @@ void httpAdminEvalCommand(HttpContext *c) {
 //    Local<Context> context = Context::New(isolate, NULL, global);
 //    Context::Scope context_scope(context);
     
-    static sds code = sdsnewlen("\0", 65536);
-    code[0] = '\0';
-    sdsupdatelen(code);
+    static bool firstTime = 1;
     
     Local<String> jsCode = String::NewFromUtf8(isolate, c->body, NewStringType::kNormal, sdslen(c->body)).ToLocalChecked();
-    context->Global()->Set(
-                           String::NewFromUtf8(isolate, "__user_code", NewStringType::kNormal).ToLocalChecked(),
-                           jsCode
-                        );
-    code = sdscatprintf(code, "(function(){\n"
-        "\"use strict\"\n"
-        "var userFunc = new Function('\"use strict\"\\n' + __user_code);\n"
-        "return JSON.stringify({Error: null, Data: userFunc()});\n"
-    "})();", c->body);
-    Local<String> source = String::NewFromUtf8(
-                                               isolate,
-                                               code,
-                                               NewStringType::kNormal,
-                                               sdslen(code)
-                                               ).ToLocalChecked();
+//    context->Global()->Set(
+//                           String::NewFromUtf8(isolate, "__user_code", NewStringType::kNormal).ToLocalChecked(),
+//                           jsCode
+//                           );
+    
     TryCatch trycatch(isolate);
-    Local<Script> script;
+    if(firstTime) {
+        firstTime = 0;
+        sds code = sdsempty();
+        
+        code = sdscatprintf(code,
+                            "function __adminEval(userCode){\n"
+                            "	\"use strict\"\n"
+                            "	var userFunc = new Function('\"use strict\"\\n' + userCode);\n"
+                            "	return JSON.stringify({Error: null, Data: userFunc()});\n"
+                            "}\n");
+        Local<String> source = String::NewFromUtf8(
+                                                   isolate,
+                                                   code,
+                                                   NewStringType::kNormal,
+                                                   sdslen(code)
+                                                   ).ToLocalChecked();
+        Local<Script> script;
 
-    if(!Script::Compile(context, source).ToLocal(&script)) {
-        String::Utf8Value error(trycatch.Exception());
-        serverLog(LL_WARNING, "JS Compile exception %s\nCode: %s\nc->body %s", *error, code, c->body);
-        httpPrepareResponse(c, sdsnew("503 Service Unavailable"), sdsnew(*error));
-        httpResponseReady(c);
-        return;
+        if(!Script::Compile(context, source).ToLocal(&script)) {
+            String::Utf8Value error(trycatch.Exception());
+            serverLog(LL_WARNING, "JS Compile exception %s\nCode: %s\nc->body %s", *error, code, c->body);
+            httpPrepareResponse(c, sdsnew("503 Service Unavailable"), sdsnew(*error));
+            httpResponseReady(c);
+            return;
+        }
+        Local<Value> result;
+        if(!script->Run(context).ToLocal(&result)) {
+            String::Utf8Value error(trycatch.Exception());
+            serverLog(LL_WARNING, "JS Runtime exception %s\n", *error);
+            httpPrepareResponse(c, sdsnew("503 Service Unavailable"), sdsnew(*error));
+            httpResponseReady(c); 
+            return;
+        }
+        
+        Local<Value> adminEvalVal;
+        context->Global()->Get(context, String::NewFromUtf8(isolate, "__adminEval", NewStringType::kNormal).ToLocalChecked()).ToLocal(&adminEvalVal);
+        Local<Function> adminEval = Local<Function>::Cast(adminEvalVal);
+        
+        __adminEval.Reset(isolate, adminEval);
+        sdsfree(code);
     }
+    
+    Local<Function> adminEval = v8::Local<v8::Function>::New(isolate, __adminEval);
+    const int argc = 1;
+    Local<Value> argv[argc] = {jsCode};
     Local<Value> result;
-    if(!script->Run(context).ToLocal(&result)) {
+    if(!adminEval->Call(context, context->Global(), argc, argv).ToLocal(&result)) {
         String::Utf8Value error(trycatch.Exception());
         serverLog(LL_WARNING, "JS Runtime exception %s\n", *error);
         httpPrepareResponse(c, sdsnew("503 Service Unavailable"), sdsnew(*error));
-        httpResponseReady(c); 
+        httpResponseReady(c);
         return;
     }
     
