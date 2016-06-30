@@ -57,6 +57,10 @@
       </MacroExpansion>
       <CommandLineArguments>
          <CommandLineArgument
+            argument = "--loglevel verbose"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
             argument = "--save &quot;&quot;"
             isEnabled = "YES">
          </CommandLineArgument>

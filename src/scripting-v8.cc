@@ -238,16 +238,25 @@ struct HttpContext {
     sds body;
     size_t headerLen;
     HttpHeader **headers;
+    sds status;
+    sds response;
 };
 
 void httpRequestHandler(aeEventLoop *el, int fd, void *privdata, int mask);
 void freeHttpClient(HttpContext *c);
 
 void httpWriteResponse(aeEventLoop *el, int fd, void *privdata, int mask) {
+#ifdef DEVELOPER
     serverLog(LL_VERBOSE, "httpWriteResponse");
+#endif
     HttpContext *c = (HttpContext*)privdata;
-    static const char resp[] = "HTTP/1.1 200 OK\r\nServer: Redis-v8\r\nContent-Type: application\\json\r\nConnection: Keep-Alive\r\nContent-Length: 7\r\n\r\n\"hello\"";
-    if(write(fd, resp, sizeof(resp) - 1) == sizeof(resp) - 1) {
+    static sds resp = sdsnewlen("\0", 65536);
+    resp[0] = '\0';
+    sdsupdatelen(resp);
+    
+    resp = sdscatprintf(resp, "HTTP/1.1 %sK\r\nServer: Redis-v8\r\nContent-Type: application\\json\r\nConnection: Keep-Alive\r\nContent-Length: %zu\r\n\r\n%s", c->status, sdslen(c->response), c->response);
+    
+    if(write(fd, resp, sdslen(resp)) > 0) {
         aeDeleteFileEvent(server.el, fd, AE_WRITABLE);
         
         if(c->connection == HttpConnectionClose) {
@@ -265,17 +274,28 @@ void httpWriteResponse(aeEventLoop *el, int fd, void *privdata, int mask) {
 }
 
 int onHeadersComplete(http_parser *parser) {
+#ifdef DEVELOPER
     serverLog(LL_VERBOSE,"onHeadersComplete method: %d %d HTTP/%d.%d Content-Length: %llu", parser->method, HTTP_GET, parser->http_major, parser->http_minor, parser->content_length);
+#endif
     HttpContext *c = (HttpContext*)parser->data;
     c->contentLength = parser->content_length;
     c->method = parser->method;
     return 0;
 }
 
+void httpResponseReady(HttpContext *c) {
+    if (aeCreateFileEvent(server.el, c->fd, AE_WRITABLE, httpWriteResponse, (void*)c) == AE_ERR)
+    {
+        aeDeleteFileEvent(server.el, c->fd, AE_READABLE);
+        freeHttpClient(c);
+    }
+}
+
 int onMessageComplete(http_parser *parser) {
-    serverLog(LL_VERBOSE,"onMessageComplete");
     HttpContext *c = (HttpContext*)parser->data;
 
+#ifdef DEVELOPER
+    serverLog(LL_VERBOSE,"onMessageComplete");
     if(c->uri) serverLog(LL_VERBOSE,"uri: %s", c->uri);
     if(c->query) serverLog(LL_VERBOSE,"query: %s", c->query);
     if(c->path) serverLog(LL_VERBOSE,"path: %s", c->path);
@@ -285,21 +305,33 @@ int onMessageComplete(http_parser *parser) {
     for(size_t i=0;i<c->headerLen;i++) {
         serverLog(LL_VERBOSE,"Header: %s=%s", c->headers[i]->field, c->headers[i]->value);
     }
+#endif
     
     aeDeleteFileEvent(server.el, c->fd, AE_READABLE);
     
-    if (aeCreateFileEvent(server.el, c->fd, AE_WRITABLE, httpWriteResponse, (void*)c) == AE_ERR)
-    {
-        aeDeleteFileEvent(server.el, c->fd, AE_READABLE);
-        freeHttpClient(c);
+    if(!c->path) {
+        if(c->status) sdsfree(c->status);
+        c->status = sdsnew("404 Not Found");
+        if(c->response) sdsfree(c->response);
+        c->response = sdsnew("{\"Error\":\"Not found\", \"Code\": 404}");
+        httpResponseReady(c);
+        return 0;
     }
+    if(c->status) sdsfree(c->status);
+    c->status = sdsnew("200 OK");
+    if(c->response) sdsfree(c->response);
+    c->response = sdsnew("{\"Error\":null,\"Data\":null}");
+    httpResponseReady(c);
+    
     return 0;
 }
 
 bool nextValueConnection;
 
 int onHeaderValue(http_parser *parser, const char *at, size_t length) {
+#ifdef DEVELOPER
     serverLog(LL_VERBOSE,"onHeaderValue `%.*s`", (int)length, at);
+#endif
     HttpContext *c = (HttpContext*)parser->data;
     if(c->headerLen < MAX_HEADERS) {
         c->headers[c->headerLen]->value = sdsnewlen(at, length);
@@ -315,7 +347,9 @@ int onHeaderValue(http_parser *parser, const char *at, size_t length) {
 }
 
 int onHeaderField(http_parser *parser, const char *at, size_t length) {
+#ifdef DEVELOPER
     serverLog(LL_VERBOSE,"onHeaderField `%.*s`", (int)length, at);
+#endif
     HttpContext *c = (HttpContext*)parser->data;
     if(c->headerLen < MAX_HEADERS) {
         c->headers[c->headerLen] = (HttpHeader*)zcalloc(sizeof(HttpHeader*));
@@ -350,16 +384,7 @@ void parseUri(HttpContext *c) {
         // 400 response
         return;
     }
-    // scheme:[//[user:password@]host[:port]][/]path[?query][#fragment]
-    // field_data[0]: off: 0, len: 4, part: http
-    // field_data[1]: off: 13, len: 9, part: 127.0.0.1
-    // field_data[2]: off: 23, len: 4, part: 8000
-    // field_data[3]: off: 27, len: 14, part: /aaaa/bbbb/ccc
-    // field_data[4]: off: 42, len: 15, part: a=1&b=200&c=322
-    // field_data[5]: off: 58, len: 3, part: abc
-    // field_data[6]: off: 7, len: 5, part: admin
     
-    //c->path = sdsnewlen(parser_url.field_data[i].len);
     if((parser_url.field_set & (1 << UrlParserQuery)) != 0) {
         if(c->query) sdsfree(c->query);
         c->query = sdsnewlen(c->uri + parser_url.field_data[UrlParserQuery].off, parser_url.field_data[UrlParserQuery].len);
@@ -374,23 +399,12 @@ void parseUri(HttpContext *c) {
         if(c->fragment) sdsfree(c->fragment);
         c->fragment = sdsnewlen(c->uri + parser_url.field_data[UrlParserFragment].off, parser_url.field_data[UrlParserFragment].len);
     }
-    
-    // for (int i = 0; i < UF_MAX; i++) {
-    //     if ((parser_url.field_set & (1 << i)) == 0) {
-    //         printf("\tfield_data[%u]: unset\n", i);
-    //         continue;
-    //     }
-    //     printf("\tfield_data[%u]: off: %u, len: %u, part: %.*s\n",
-    //         i,
-    //         parser_url.field_data[i].off,
-    //         parser_url.field_data[i].len,
-    //         parser_url.field_data[i].len,
-    //         c->uri + parser_url.field_data[i].off);
-    // }
 }
 
 int onUrl(http_parser *parser, const char *at, size_t length) {
+#ifdef DEVELOPER
     serverLog(LL_VERBOSE,"onUrl `%.*s`", (int)length, at);
+#endif
     HttpContext *c = (HttpContext*)parser->data;
     if(c->uri) {
         sdsfree(c->uri);
@@ -403,7 +417,9 @@ int onUrl(http_parser *parser, const char *at, size_t length) {
 
 int onBody(http_parser *parser, const char *at, size_t length) {
     HttpContext *c = (HttpContext*)parser->data;
+#ifdef DEVELOPER
     serverLog(LL_VERBOSE,"onBody (content-length: %zu) `%.*s`", c->contentLength, (int)length, at);
+#endif
     if(!c->body) {
         c->body = sdsempty();
         if(c->contentLength) {
@@ -415,7 +431,9 @@ int onBody(http_parser *parser, const char *at, size_t length) {
 }
 
 void httpRequestHandler(aeEventLoop *el, int fd, void *privdata, int mask) {
+#ifdef DEVELOPER
     serverLog(LL_VERBOSE,"httpRequestHandler");
+#endif
     http_parser_settings settings;
     http_parser_settings_init(&settings);
     settings.on_headers_complete = onHeadersComplete;
@@ -448,14 +466,18 @@ void httpRequestHandler(aeEventLoop *el, int fd, void *privdata, int mask) {
         freeHttpClient(c);
         return;
     }
-    serverLog(LL_VERBOSE,"readed %d bytes %.*s", nread, nread, buf);
     nextValueConnection = FALSE;
     int nparsed = http_parser_execute(c->parser, &settings, buf, nread);
+#ifdef DEVELOPER
+    serverLog(LL_VERBOSE,"readed %d bytes %.*s", nread, nread, buf);
     serverLog(LL_VERBOSE,"nparsed %d bytes", nparsed);
+#endif
 }
 
 HttpContext *allocHttpClient(int fd) {
+#ifdef DEVELOPER
     serverLog(LL_VERBOSE,"allocHttpClient");
+#endif
     HttpContext *c = (HttpContext*)zcalloc(sizeof(HttpContext));
     c->fd = fd;
     http_parser *parser = (http_parser*)zmalloc(sizeof(http_parser));
@@ -468,7 +490,9 @@ HttpContext *allocHttpClient(int fd) {
 }
 
 void freeHttpClient(HttpContext *c) {
+#ifdef DEVELOPER
     serverLog(LL_VERBOSE,"freeHttpClient");
+#endif
     if(c->fd) close(c->fd);
     if(c->parser) zfree(c->parser);
     if(c->body) sdsfree(c->body);
@@ -476,6 +500,8 @@ void freeHttpClient(HttpContext *c) {
     if(c->query) sdsfree(c->query);
     if(c->path) sdsfree(c->path);
     if(c->fragment) sdsfree(c->fragment);
+    if(c->status) sdsfree(c->status);
+    if(c->response) sdsfree(c->response);
     
     for(size_t i=0;i<c->headerLen;i++) {
         sdsfree(c->headers[i]->field);
@@ -487,7 +513,9 @@ void freeHttpClient(HttpContext *c) {
 }
 
 void httpAcceptHandler(aeEventLoop *el, int fd, void *privdata, int mask) {
+#ifdef DEVELOPER
     serverLog(LL_VERBOSE,"httpAcceptHandler");
+#endif
     int cport, cfd, max = MAX_ACCEPTS_PER_CALL;
     char cip[NET_IP_STR_LEN];
     UNUSED(el);
@@ -502,7 +530,9 @@ void httpAcceptHandler(aeEventLoop *el, int fd, void *privdata, int mask) {
                     "Accepting client connection: %s", server.neterr);
             return;
         }
+#ifdef DEVELOPER
         serverLog(LL_VERBOSE,"Accepted %s:%d", cip, cport);
+#endif
         
         anetNonBlock(NULL,fd);
         anetEnableTcpNoDelay(NULL,fd);
