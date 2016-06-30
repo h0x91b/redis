@@ -54,10 +54,11 @@ endif
 # Override default settings if possible
 -include .make-settings
 
-FINAL_CFLAGS=$(STD) $(WARN) $(OPT) $(DEBUG) $(CFLAGS) $(REDIS_CFLAGS) -framework CoreFoundation
+FINAL_CFLAGS=$(STD) $(WARN) $(OPT) $(DEBUG) $(CFLAGS) $(REDIS_CFLAGS)
 FINAL_CXXFLAGS=$(STD) $(WARN) $(OPT) $(DEBUG) $(CFLAGS) $(REDIS_CFLAGS) -I../deps/v8/include/ -Wc++11-long-long -Wc99-extensions
-FINAL_LDFLAGS=$(LDFLAGS) $(REDIS_LDFLAGS) $(DEBUG)
-FINAL_LIBS=-lm -stdlib=libstdc++ ../deps/v8/out/x64.release/{libv8_{base,libbase,libplatform,nosnapshot},libicu{i18n,uc,data}}.a
+FINAL_LDFLAGS=$(LDFLAGS) $(REDIS_LDFLAGS) $(DEBUG) -framework CoreFoundation
+#FINAL_LIBS=-lm -stdlib=libstdc++ ../deps/v8/out/x64.release/{libv8_{base,libbase,libplatform,nosnapshot},libicu{i18n,uc,data}}.a
+FINAL_LIBS=-lm -stdlib=libc++ -L../deps/v8/out/x64.release/ -lv8 -licuuc -licui18n ../deps/v8/out/x64.release/libv8_{base,libbase,libplatform,nosnapshot}.a
 DEBUG=-g -ggdb
 
 ifeq ($(uname_S),SunOS)
@@ -228,6 +229,12 @@ distclean: clean
 	-(rm -f .make-*)
 
 .PHONY: distclean
+
+run: all
+	DYLD_LIBRARY_PATH=../deps/v8/out/x64.release/ ./redis-server --save "" --loglevel verbose
+
+runs: all
+	DYLD_LIBRARY_PATH=../deps/v8/out/x64.release/ ./redis-server --save ""
 
 test: $(REDIS_SERVER_NAME) $(REDIS_CHECK_AOF_NAME)
 	@(cd ..; ./runtest)

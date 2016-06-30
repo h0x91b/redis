@@ -36,8 +36,8 @@ distclean:
 	-(cd linenoise && $(MAKE) clean) > /dev/null || true
 	-(cd lua && $(MAKE) clean) > /dev/null || true
 	-(cd jemalloc && [ -f Makefile ] && $(MAKE) distclean) > /dev/null || true
-	-(rm -rf v8 > /dev/null) || true
-	-(rm -rf .gclient > /dev/null) || true
+	#-(rm -rf v8 > /dev/null) || true
+	#-(rm -rf .gclient > /dev/null) || true
 	-(rm -f .make-*)
 
 .PHONY: distclean
@@ -84,4 +84,5 @@ jemalloc: .make-prerequisites
 .PHONY: jemalloc
 
 v8:
-	export PATH=depot_tools:$$PATH; echo $$PATH;fetch --no-history v8 && cd v8 && make x64.release OUTDIR=out snapshot=off -j 8
+	export PATH=depot_tools:$$PATH; echo $$PATH;fetch --no-history v8 && cd v8 && make x64.release library=shared OUTDIR=out snapshot=off -j 8
+	

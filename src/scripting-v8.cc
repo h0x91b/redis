@@ -3,6 +3,7 @@ extern "C" {
     #include "server.h"
     #include "cluster.h"
     #include "http_parser.h"
+    #include "zmalloc.h"
 }
 
 #include <stdio.h>
@@ -224,7 +225,16 @@ struct HttpContext {
     HttpConnection connection;
     http_parser *parser;
     size_t contentLength;
-    sds url;
+    sds uri;
+    //scheme:[//[user:password@]host[:port]][/]path[?query][#fragment]
+    // sds scheme;
+    // sds user;
+    // sds password;
+    // sds host;
+    // sds port;
+    sds path;
+    sds query;
+    sds fragment;
     sds body;
     size_t headerLen;
     HttpHeader **headers;
@@ -244,7 +254,6 @@ void httpWriteResponse(aeEventLoop *el, int fd, void *privdata, int mask) {
             freeHttpClient(c);
             return;
         }
-        
         if (aeCreateFileEvent(server.el, fd, AE_READABLE,
             httpRequestHandler, (void*)c) == AE_ERR)
         {
@@ -266,12 +275,13 @@ int onHeadersComplete(http_parser *parser) {
 int onMessageComplete(http_parser *parser) {
     serverLog(LL_VERBOSE,"onMessageComplete");
     HttpContext *c = (HttpContext*)parser->data;
-    
-    serverLog(LL_VERBOSE,"url: %s", c->url);
-    if(c->body) {
-        serverLog(LL_VERBOSE,"body: %s", c->body);
-    }
-    
+
+    if(c->uri) serverLog(LL_VERBOSE,"uri: %s", c->uri);
+    if(c->query) serverLog(LL_VERBOSE,"query: %s", c->query);
+    if(c->path) serverLog(LL_VERBOSE,"path: %s", c->path);
+    if(c->fragment) serverLog(LL_VERBOSE,"fragment: %s", c->fragment);
+    if(c->body) serverLog(LL_VERBOSE,"body: %s", c->body);
+
     for(size_t i=0;i<c->headerLen;i++) {
         serverLog(LL_VERBOSE,"Header: %s=%s", c->headers[i]->field, c->headers[i]->value);
     }
@@ -320,10 +330,74 @@ int onHeaderField(http_parser *parser, const char *at, size_t length) {
     return 0;
 }
 
+enum UrlParser { 
+    UrlParserScheme = 0,
+    UrlParserHost = 1,
+    UrlParserPort = 2,
+    UrlParserPath = 3,
+    UrlParserQuery = 4,
+    UrlParserFragment = 5,
+    UrlParserUser = 6
+};
+
+void parseUri(HttpContext *c) {
+    http_parser_url parser_url;
+    http_parser_url_init(&parser_url);
+    
+    int result = http_parser_parse_url(c->uri, sdslen(c->uri), 0, &parser_url);
+    if (result != 0) {
+        serverLog(LL_WARNING,"http_parser_parse_url error");
+        // 400 response
+        return;
+    }
+    // scheme:[//[user:password@]host[:port]][/]path[?query][#fragment]
+    // field_data[0]: off: 0, len: 4, part: http
+    // field_data[1]: off: 13, len: 9, part: 127.0.0.1
+    // field_data[2]: off: 23, len: 4, part: 8000
+    // field_data[3]: off: 27, len: 14, part: /aaaa/bbbb/ccc
+    // field_data[4]: off: 42, len: 15, part: a=1&b=200&c=322
+    // field_data[5]: off: 58, len: 3, part: abc
+    // field_data[6]: off: 7, len: 5, part: admin
+    
+    //c->path = sdsnewlen(parser_url.field_data[i].len);
+    if((parser_url.field_set & (1 << UrlParserQuery)) != 0) {
+        if(c->query) sdsfree(c->query);
+        c->query = sdsnewlen(c->uri + parser_url.field_data[UrlParserQuery].off, parser_url.field_data[UrlParserQuery].len);
+    }
+    
+    if((parser_url.field_set & (1 << UrlParserPath)) != 0) {
+        if(c->path) sdsfree(c->path);
+        c->path = sdsnewlen(c->uri + parser_url.field_data[UrlParserPath].off, parser_url.field_data[UrlParserPath].len);
+    }
+    
+    if((parser_url.field_set & (1 << UrlParserFragment)) != 0) {
+        if(c->fragment) sdsfree(c->fragment);
+        c->fragment = sdsnewlen(c->uri + parser_url.field_data[UrlParserFragment].off, parser_url.field_data[UrlParserFragment].len);
+    }
+    
+    // for (int i = 0; i < UF_MAX; i++) {
+    //     if ((parser_url.field_set & (1 << i)) == 0) {
+    //         printf("\tfield_data[%u]: unset\n", i);
+    //         continue;
+    //     }
+    //     printf("\tfield_data[%u]: off: %u, len: %u, part: %.*s\n",
+    //         i,
+    //         parser_url.field_data[i].off,
+    //         parser_url.field_data[i].len,
+    //         parser_url.field_data[i].len,
+    //         c->uri + parser_url.field_data[i].off);
+    // }
+}
+
 int onUrl(http_parser *parser, const char *at, size_t length) {
     serverLog(LL_VERBOSE,"onUrl `%.*s`", (int)length, at);
     HttpContext *c = (HttpContext*)parser->data;
-    c->url = sdsnewlen(at, length);
+    if(c->uri) {
+        sdsfree(c->uri);
+        c->uri = NULL;
+    }
+    c->uri = sdsnewlen(at, length);
+    parseUri(c);
     return 0;
 }
 
@@ -398,7 +472,11 @@ void freeHttpClient(HttpContext *c) {
     if(c->fd) close(c->fd);
     if(c->parser) zfree(c->parser);
     if(c->body) sdsfree(c->body);
-    if(c->url) sdsfree(c->url);
+    if(c->uri) sdsfree(c->uri);
+    if(c->query) sdsfree(c->query);
+    if(c->path) sdsfree(c->path);
+    if(c->fragment) sdsfree(c->fragment);
+    
     for(size_t i=0;i<c->headerLen;i++) {
         sdsfree(c->headers[i]->field);
         sdsfree(c->headers[i]->value);
