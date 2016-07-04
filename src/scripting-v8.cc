@@ -15,7 +15,7 @@ Isolate* isolate;
 v8::Global<v8::Context> context_;
 
 //void initHttp();
-extern void initHttp(Local<Context>*);
+extern void initHttp();
 
 class ArrayBufferAllocator;
 ArrayBufferAllocator *allocator;
@@ -101,22 +101,22 @@ void redisCall(const v8::FunctionCallbackInfo<v8::Value>& args) {
     c->argv = argv;
     c->argc = argc;
     
-    /* If this is a Redis Cluster node, we need to make sure Lua is not
-    * trying to access non-local keys, with the exception of commands
-    * received from our master. */
-    if (server.cluster_enabled && !(server.v8_caller->flags & CLIENT_MASTER)) {
-       /* Duplicate relevant flags in the lua client. */
-       c->flags &= ~(CLIENT_READONLY|CLIENT_ASKING);
-       c->flags |= server.v8_caller->flags & (CLIENT_READONLY|CLIENT_ASKING);
-       if (getNodeByQuery(c,c->cmd,c->argv,c->argc,NULL,NULL) !=
-                          server.cluster->myself)
-       {
-           args.GetReturnValue().Set(Exception::Error(
-               v8::String::NewFromUtf8(isolate, "Lua script attempted to access a non local key in a cluster node", v8::NewStringType::kNormal).ToLocalChecked()
-           ));
-           goto cleanup;
-       }
-    }
+//    /* If this is a Redis Cluster node, we need to make sure Lua is not
+//    * trying to access non-local keys, with the exception of commands
+//    * received from our master. */
+//    if (server.cluster_enabled && !(server.v8_caller->flags & CLIENT_MASTER)) {
+//       /* Duplicate relevant flags in the lua client. */
+//       c->flags &= ~(CLIENT_READONLY|CLIENT_ASKING);
+//       c->flags |= server.v8_caller->flags & (CLIENT_READONLY|CLIENT_ASKING);
+//       if (getNodeByQuery(c,c->cmd,c->argv,c->argc,NULL,NULL) !=
+//                          server.cluster->myself)
+//       {
+//           args.GetReturnValue().Set(Exception::Error(
+//               v8::String::NewFromUtf8(isolate, "Lua script attempted to access a non local key in a cluster node", v8::NewStringType::kNormal).ToLocalChecked()
+//           ));
+//           goto cleanup;
+//       }
+//    }
     
     cmd = lookupCommand((sds)argv[0]->ptr);
     
@@ -170,8 +170,6 @@ void redisCall(const v8::FunctionCallbackInfo<v8::Value>& args) {
         }
     }
     
-    //printf("reply: `%s`\n", reply);
-    
     redisReaderFeed(reader, reply, reply_len);
     redisReaderGetReply(reader, (void**)&redisReaderResponse);
     
@@ -206,6 +204,23 @@ cleanup:
         sdsfree(reply);
 }
 
+void localDBCall(const v8::FunctionCallbackInfo<v8::Value>& args) {
+    serverLog(LL_WARNING,"localDBCall");
+}
+
+void remoteDBCall(const v8::FunctionCallbackInfo<v8::Value>& args) {
+    serverLog(LL_WARNING,"remoteDBCall");
+}
+
+void DBCall(const v8::FunctionCallbackInfo<v8::Value>& args) {
+    serverLog(LL_WARNING,"DBCall");
+    bool isLocal = true;
+    if(args.Length() > 1) {
+        //check hash
+    }
+    isLocal ? localDBCall(args) : remoteDBCall(args);
+}
+
 void initV8() {
     // Initialize V8.
     V8::InitializeICU();
@@ -228,13 +243,10 @@ void initV8() {
                 v8::FunctionTemplate::New(isolate, redisLog)
     );
     
-//    v8::Local<v8::ObjectTemplate> DB = v8::ObjectTemplate::New(isolate);
-//    global->Set(String::NewFromUtf8(isolate, "DB", NewStringType::kNormal).ToLocalChecked(), DB);
-    
     v8::Local<v8::Context> context = Context::New(isolate, NULL, global);
     context_.Reset(isolate, context);
     serverLog(LL_WARNING,"V8 initialized");
-    initHttp(&context);
+    initHttp();
 }
 
 void shutdownV8() {

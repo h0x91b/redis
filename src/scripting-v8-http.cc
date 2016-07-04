@@ -13,6 +13,7 @@ Global<Object> DB;
 extern v8::Platform* platform;
 extern Isolate* isolate;
 extern Global<Context> context_;
+extern void DBCall(const v8::FunctionCallbackInfo<v8::Value>& args);
 
 //Global<Context> context_DB;
 char neterrbuf[256];
@@ -20,14 +21,16 @@ int httpServer;
 
 const char *COREJSAPI = R"COREAPI(
 var DB = {};
-function InitDB(redis) {
+log('CoreJSApi');
+function InitDB(DBCall) {
+    log('InitDB');
     var procedures = new Map();
     DB.__adminEval = function __adminEval(userCode){
         "use strict";
         var userFunc = new Function('"use strict"\n' + userCode);
         return JSON.stringify({Error: null, Data: userFunc()});
     };
-    DB.__registerProcedure = function(opts, name, version, cb) {
+    DB.__registerProcedure = function __registerProcedure(opts, name, version, cb) {
         if(arguments.length != 4) throw new Error('Wrong arguments count');
         if(!Number.isNumber(version)) throw new Error('Version must be a number');
         var p = {
@@ -124,59 +127,7 @@ void httpAdminEvalCommand(HttpContext *c) {
     v8::Local<v8::Context> context = v8::Local<v8::Context>::New(isolate, context_);
     v8::Context::Scope context_scope(context);
     
-    static bool firstTime = 1;
-    
     TryCatch trycatch(isolate);
-    if(firstTime) {
-        firstTime = 0;
-        sds code = sdsnew(COREJSAPI);
-        printf("check %s\n", code);
-        Local<String> source;
-        String::NewFromUtf8(
-                                                   isolate,
-                                                   code,
-                                                   NewStringType::kNormal,
-                                                   sdslen(code)
-                                                   ).ToLocal(&source);
-        Local<Script> script;
-        
-        if(!Script::Compile(context, source).ToLocal(&script)) {
-            String::Utf8Value error(trycatch.Exception());
-            String::Utf8Value sss(source);
-            serverLog(LL_WARNING, "JS Compile exception %s\nCode: %.*s\nc->body %s \nsource: %.*s", *error, sdslen(code), code, c->body, sss.length(), *sss);
-            httpPrepareResponse(c, sdsnew("503 Service Unavailable"), sdsnew(*error));
-            httpResponseReady(c);
-            return;
-        }
-        Local<Value> result;
-        if(!script->Run(context).ToLocal(&result)) {
-            String::Utf8Value error(trycatch.Exception());
-            serverLog(LL_WARNING, "JS Runtime exception %s\n", *error);
-            httpPrepareResponse(c, sdsnew("503 Service Unavailable"), sdsnew(*error));
-            httpResponseReady(c);
-            return;
-        }
-        
-        Local<Value> InitDBVal;
-        context->Global()->Get(context, String::NewFromUtf8(isolate, "InitDB", NewStringType::kNormal).ToLocalChecked()).ToLocal(&InitDBVal);
-        Local<Function> InitDB = Local<Function>::Cast(InitDBVal);
-        
-        const int argc = 0;
-        Local<Value> argv[argc] = {};
-        InitDB->Call(context, context->Global(), argc, argv);
-        
-        Local<Value> adminEvalVal, DBVal;
-        context->Global()->Get(context, String::NewFromUtf8(isolate, "DB", NewStringType::kNormal).ToLocalChecked()).ToLocal(&DBVal);
-        Local<Object> DB = Local<Object>::Cast(DBVal);
-        ::DB.Reset(isolate, DB);
-        
-        DB->Get(context, String::NewFromUtf8(isolate, "__adminEval", NewStringType::kNormal).ToLocalChecked()).ToLocal(&adminEvalVal);
-        Local<Function> adminEval = Local<Function>::Cast(adminEvalVal);
-        
-        __adminEval.Reset(isolate, adminEval);
-        sdsfree(code);
-    }
-    
     Local<Function> adminEval = v8::Local<v8::Function>::New(isolate, __adminEval);
     Local<String> jsCode;
     String::NewFromUtf8(isolate, c->body, NewStringType::kNormal, sdslen(c->body)).ToLocal(&jsCode);
@@ -462,7 +413,7 @@ void httpAcceptHandler(aeEventLoop *el, int fd, void *privdata, int mask) {
     }
 }
 
-void initHttp(Local<Context> *context) {
+void initHttp() {
     serverLog(LL_WARNING,"Init HTTP");
     httpServer = anetTcpServer(neterrbuf, httpPort, NULL, tcpBacklog);
     anetNonBlock(NULL, httpServer);
@@ -471,6 +422,58 @@ void initHttp(Local<Context> *context) {
         serverPanic(
                     "Unrecoverable error creating server.ipfd file event.");
     }
-    serverLog(LL_WARNING,"HTTP initialized on port %d", httpPort);
+    serverLog(LL_WARNING,"HTTP listen on port %d", httpPort);
+    serverLog(LL_WARNING, "Init CoreJS API");
+    
+    Isolate::Scope isolate_scope(isolate);
+    HandleScope handle_scope(isolate);
+    
+    //same context
+    v8::Local<v8::Context> context = v8::Local<v8::Context>::New(isolate, context_);
+    v8::Context::Scope context_scope(context);
+    
+    TryCatch trycatch(isolate);
+    sds code = sdsnew(COREJSAPI);
+    Local<String> source;
+    String::NewFromUtf8(
+                        isolate,
+                        code,
+                        NewStringType::kNormal,
+                        sdslen(code)
+                        ).ToLocal(&source);
+    Local<Script> script;
+    
+    if(!Script::Compile(context, source).ToLocal(&script)) {
+        String::Utf8Value error(trycatch.Exception());
+        serverLog(LL_WARNING, "JS Compile exception %s\nCode: %.*s", *error, sdslen(code), code);
+        return;
+    }
+    Local<Value> result;
+    if(!script->Run(context).ToLocal(&result)) {
+        String::Utf8Value error(trycatch.Exception());
+        serverLog(LL_WARNING, "JS Runtime exception %s\n", *error);
+        return;
+    }
+    
+    Local<Value> InitDBVal;
+    context->Global()->Get(context, String::NewFromUtf8(isolate, "InitDB", NewStringType::kNormal).ToLocalChecked()).ToLocal(&InitDBVal);
+    Local<Function> InitDB = Local<Function>::Cast(InitDBVal);
+    
+    Local<Function> DBCallFun = FunctionTemplate::New(isolate, DBCall)->GetFunction();
+    const int argc = 1;
+    Local<Value> argv[argc] = {DBCallFun};
+    InitDB->Call(context, context->Global(), argc, argv);
+    
+    Local<Value> adminEvalVal, DBVal;
+    context->Global()->Get(context, String::NewFromUtf8(isolate, "DB", NewStringType::kNormal).ToLocalChecked()).ToLocal(&DBVal);
+    Local<Object> DB = Local<Object>::Cast(DBVal);
+    ::DB.Reset(isolate, DB);
+    
+    DB->Get(context, String::NewFromUtf8(isolate, "__adminEval", NewStringType::kNormal).ToLocalChecked()).ToLocal(&adminEvalVal);
+    Local<Function> adminEval = Local<Function>::Cast(adminEvalVal);
+    
+    __adminEval.Reset(isolate, adminEval);
+    sdsfree(code);
+    serverLog(LL_WARNING,"Init HTTP done");
     //context_DB.Reset(isolate, *context);
 }
