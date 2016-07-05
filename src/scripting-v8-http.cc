@@ -22,13 +22,34 @@ int httpServer;
 const char *COREJSAPI = R"COREAPI(
 var DB = {};
 log('CoreJSApi');
-function InitDB(DBCall) {
+function InitDB(DBCall, httpResolve, httpReject) {
     log('InitDB');
     var procedures = new Map();
-    DB.__adminEval = function __adminEval(userCode){
+    DB.DBCall = DBCall;
+//    var userFunc;
+    DB.__adminEval = function __adminEval(context, userCode, req, res){
         "use strict";
-        var userFunc = new Function('"use strict"\n' + userCode);
-        return JSON.stringify({Error: null, Data: userFunc()});
+        var userFunc = new Function('req', 'res', 'cb', '"use strict"\n' + userCode);
+//        if(!userFunc)
+//            userFunc = new Function('context', 'req', 'res', 'resolve', 'reject', '"use strict"\n' + userCode);
+//        var p = new Promise(function promiseUserFunc(eresolve, ereject){
+//            userFunc(req, res, eresolve, ereject);
+//        });
+//        p.then((data) => {
+//            httpResolve(context, JSON.stringify({Error:null, Data: data}));
+//        });
+//        p.catch((err) => {
+//            httpReject(context, JSON.stringify({Error:err.toString(), Stack: err.stack}));
+//        });
+        userFunc(req, res, cb);
+        
+        function cb(err, data) {
+            if(err) {
+                httpReject(context, JSON.stringify({Error:err}));
+            } else {
+                httpResolve(context, JSON.stringify({Error:null, Data: data}));
+            }
+        }
     };
     DB.__registerProcedure = function __registerProcedure(opts, name, version, cb) {
         if(arguments.length != 4) throw new Error('Wrong arguments count');
@@ -43,6 +64,36 @@ function InitDB(DBCall) {
         var fullName = p.version + '%' + p.name;
         procedures.set(fullName, p);
     };
+    
+    //promises works like shit, 56k vs 35k with promises, each one extra promise use ~20%...
+    function Counter(name) {
+        this.name = name;
+        if(!true) {
+            throw new Error('Counter with name `'+name+'` is not defined');
+        }
+    }
+    Counter.load = function(name) { return new Counter(name); }
+    Counter.prototype.get = function() { return this.incrBy(0); }
+    Counter.prototype.set = function(num) {
+        var self = this;
+        var p = new Promise(function(resolve, reject){
+            DBCall(() => { resolve(num); }, reject, 'SET', 'INCR:'+self.name, num);
+        });
+        return p;
+    }
+    Counter.prototype.incr = function() { return this.incrBy(1); }
+    Counter.prototype.decr = function() { return this.incrBy(-1); }
+    Counter.prototype.incrBy = function(num) {
+        var self = this;
+        var p = new Promise(function(resolve, reject){
+            DBCall(resolve, reject, 'INCRBY', 'INCR:'+self.name, num);
+        });
+        return p;
+    };
+    Counter.prototype.flush = function() { return this.set(0); }
+    
+    
+    DB.Counter = Counter;
     //Object.freeze(DB);
     InitDB = null;
 }
@@ -83,7 +134,7 @@ int onHeadersComplete(http_parser *parser) {
 #endif
     HttpContext *c = (HttpContext*)parser->data;
     c->contentLength = parser->content_length;
-    c->method = parser->method;
+    c->method = parser->method; 
     return 0;
 }
 
@@ -110,6 +161,26 @@ void httpResponse404(HttpContext *c) {
     httpResponseReady(c);
 }
 
+void httpResolve(const v8::FunctionCallbackInfo<v8::Value>& args) {
+#ifdef DEVELOPER
+    serverLog(LL_VERBOSE,"httpResolve");
+#endif
+    HttpContext* c = reinterpret_cast<HttpContext*>(args[0].As<External>()->Value());
+    String::Utf8Value utf8(args[1]);
+    httpPrepareResponse(c, sdsnew("200 OK"), sdsnewlen(*utf8, utf8.length()));
+    httpResponseReady(c);
+}
+
+void httpReject(const v8::FunctionCallbackInfo<v8::Value>& args) {
+#ifdef DEVELOPER
+    serverLog(LL_VERBOSE,"httpReject");
+#endif
+    HttpContext* c = reinterpret_cast<HttpContext*>(args[0].As<External>()->Value());
+    String::Utf8Value utf8(args[1]);
+    httpPrepareResponse(c, sdsnew("503 Service Unavailable"), sdsnewlen(*utf8, utf8.length()));
+    httpResponseReady(c);
+}
+
 void httpAdminEvalCommand(HttpContext *c) {
 #ifdef DEVELOPER
     serverLog(LL_VERBOSE,"httpAdminEvalCommand");
@@ -131,8 +202,13 @@ void httpAdminEvalCommand(HttpContext *c) {
     Local<Function> adminEval = v8::Local<v8::Function>::New(isolate, __adminEval);
     Local<String> jsCode;
     String::NewFromUtf8(isolate, c->body, NewStringType::kNormal, sdslen(c->body)).ToLocal(&jsCode);
-    const int argc = 1;
-    Local<Value> argv[argc] = {jsCode};
+    Local<Object> reqObj = Object::New(isolate);
+    Local<Object> resObj = Object::New(isolate);
+    const int argc = 4;
+//    Local<Function> resolveFn = FunctionTemplate::New(isolate, httpResolve)->GetFunction();
+//    Local<Function> rejectFn = FunctionTemplate::New(isolate, httpReject)->GetFunction();
+    Local<External> httpContext = External::New(isolate, (void*)c);
+    Local<Value> argv[argc] = {httpContext, jsCode, reqObj, resObj/*, resolveFn, rejectFn*/};
     Local<Value> result;
     if(!adminEval->Call(context, context->Global(), argc, argv).ToLocal(&result)) {
         String::Utf8Value error(trycatch.Exception());
@@ -142,10 +218,10 @@ void httpAdminEvalCommand(HttpContext *c) {
         return;
     }
     
-    String::Utf8Value utf8(result);
+//    String::Utf8Value utf8(result);
     
-    httpPrepareResponse(c, sdsnew("200 OK"), sdsnewlen(*utf8, utf8.length()));
-    httpResponseReady(c);
+//    httpPrepareResponse(c, sdsnew("200 OK"), sdsnewlen(*utf8, utf8.length()));
+//    httpResponseReady(c);
 }
 
 int onMessageComplete(http_parser *parser) {
@@ -460,8 +536,10 @@ void initHttp() {
     Local<Function> InitDB = Local<Function>::Cast(InitDBVal);
     
     Local<Function> DBCallFun = FunctionTemplate::New(isolate, DBCall)->GetFunction();
-    const int argc = 1;
-    Local<Value> argv[argc] = {DBCallFun};
+    Local<Function> __httpResolve = FunctionTemplate::New(isolate, httpResolve)->GetFunction();
+    Local<Function> __httpReject = FunctionTemplate::New(isolate, httpReject)->GetFunction();
+    const int argc = 3;
+    Local<Value> argv[argc] = {DBCallFun, __httpResolve, __httpReject};
     InitDB->Call(context, context->Global(), argc, argv);
     
     Local<Value> adminEvalVal, DBVal;

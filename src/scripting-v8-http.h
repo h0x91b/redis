@@ -19,7 +19,7 @@ const unsigned short httpPort = 9500;
 const unsigned int tcpBacklog = 512;
 const size_t MAX_HEADERS = 64;
 #define MAX_ACCEPTS_PER_CALL 1000
-#define DEVELOPER
+// #define DEVELOPER
 
 EXTERNC struct aeEventLoop;
 

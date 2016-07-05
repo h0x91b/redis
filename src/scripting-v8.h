@@ -16,6 +16,7 @@ EXTERNC struct client;
 EXTERNC void jsEvalCommand(client *c);
 EXTERNC void initV8();
 EXTERNC void shutdownV8();
+#define PROTO_REPLY_CHUNK_BYTES (16*1024)
 
 #ifdef __cplusplus
 

@@ -16,6 +16,8 @@ v8::Global<v8::Context> context_;
 
 //void initHttp();
 extern void initHttp();
+extern void httpResolve(const v8::FunctionCallbackInfo<v8::Value>& args);
+extern void httpReject(const v8::FunctionCallbackInfo<v8::Value>& args);
 
 class ArrayBufferAllocator;
 ArrayBufferAllocator *allocator;
@@ -46,7 +48,7 @@ void redisLog(const v8::FunctionCallbackInfo<v8::Value>& args) {
 Local<Value> parseResponse(redisReply *reply) {
     EscapableHandleScope scope(isolate);
     Local<Value> resp;
-    Local<Array> arr = Array::New(isolate);
+    Local<Array> arr;
     
     switch(reply->type) {
     case REDIS_REPLY_NIL:
@@ -60,6 +62,7 @@ Local<Value> parseResponse(redisReply *reply) {
         resp = String::NewFromUtf8(isolate, reply->str, v8::NewStringType::kNormal, reply->len).ToLocalChecked();
         break;
     case REDIS_REPLY_ARRAY:
+        arr = Array::New(isolate);
         for (size_t i=0; i<reply->elements; i++) {
             arr->Set(Integer::New(isolate, i), parseResponse(reply->element[i]));
         }
@@ -205,7 +208,124 @@ cleanup:
 }
 
 void localDBCall(const v8::FunctionCallbackInfo<v8::Value>& args) {
-    serverLog(LL_WARNING,"localDBCall");
+    //serverLog(LL_WARNING,"localDBCall");
+    
+    HandleScope handle_scope(isolate);
+    v8::Local<v8::Context> context = v8::Local<v8::Context>::New(isolate, context_);
+    v8::Context::Scope context_scope(context);
+    
+    Local<Function> resolve = args[0].As<Function>();
+    Local<Function> reject = args[1].As<Function>();
+    
+    client *c = server.v8_client;
+    sds reply = NULL;
+    int reply_len = 0;
+    int bufpos = 0;
+    const int bufpos2 = 16384;
+    struct redisCommand *cmd;
+    static robj **argv = NULL;
+    static int argv_size = 0;
+    int argc = args.Length() - 2;
+    static redisReader *reader = redisReaderCreate();
+    redisReply *redisReaderResponse = NULL;
+    v8::Handle<v8::Value> ret_value;
+    int call_flags = CMD_CALL_SLOWLOG | CMD_CALL_STATS;
+    
+    if (argv_size < argc) {
+        argv = (robj **)zrealloc(argv,sizeof(robj*)*argc);
+        argv_size = argc;
+    }
+    
+    for (int i = 2; i < args.Length(); i++) {
+        v8::HandleScope handle_scope(isolate);
+        v8::String::Utf8Value str( args[i]->ToString() );
+        argv[i-2] = createStringObject(*str, str.length());
+    }
+    
+    c->argv = argv;
+    c->argc = argc;
+
+    cmd = lookupCommand((sds)argv[0]->ptr);
+    
+    if (!cmd || ((cmd->arity > 0 && cmd->arity != argc) ||
+                 (argc < -cmd->arity)))
+    {
+        if (cmd) {
+            Local<Value> argv[] = {String::NewFromUtf8(isolate, "Wrong number of args calling Redis command From JS script", NewStringType::kNormal).ToLocalChecked()};
+            reject->Call(context, context->Global(), 1, argv);
+        }
+        else {
+            Local<Value> argv[] = {String::NewFromUtf8(isolate, "Unknown Redis command called from JS script", NewStringType::kNormal).ToLocalChecked()};
+            reject->Call(context, context->Global(), 1, argv);
+
+        }
+        goto cleanup;
+    }
+
+    c->cmd = c->lastcmd = cmd;
+    
+    if (cmd->flags & CMD_NOSCRIPT) {
+        Local<Value> argv[] = {String::NewFromUtf8(isolate, "This Redis command is not allowed from scripts", NewStringType::kNormal).ToLocalChecked()};
+        reject->Call(context, context->Global(), 1, argv);
+
+        goto cleanup;
+    }
+
+    call(c, call_flags);
+    
+    /* Convert the result of the Redis command into a suitable Lua type.
+     * The first thing we need is to create a single string from the client
+     * output buffers. */
+    if (c->reply->len == 0 && c->bufpos < 16384) {
+        /* This is a fast path for the common case of a reply inside the
+         * client static buffer. Don't create an SDS string but just use
+         * the client buffer directly. */
+        reply_len = c->bufpos;
+        c->buf[c->bufpos] = '\0';
+        reply = c->buf;
+        c->bufpos = 0;
+    } else {
+        reply_len = c->bufpos;
+        reply = sdsnewlen(c->buf,c->bufpos);
+        c->bufpos = 0;
+        while(listLength(c->reply)) {
+            sds o = (sds)listNodeValue(listFirst(c->reply));
+            reply_len += sdslen(o);
+            reply = sdscatsds(reply,o);
+            listDelNode(c->reply,listFirst(c->reply));
+        }
+    }
+    
+    redisReaderFeed(reader, reply, reply_len);
+    redisReaderGetReply(reader, (void**)&redisReaderResponse);
+    
+    if(redisReaderResponse->type == REDIS_REPLY_ERROR) {
+        serverLog(LL_WARNING, "reply error %s", redisReaderResponse->str);
+        Local<Value> argv[] = {String::NewFromUtf8(isolate, redisReaderResponse->str, NewStringType::kNormal, redisReaderResponse->len).ToLocalChecked()};
+        reject->Call(context, context->Global(), 1, argv);
+    } else {
+        ret_value = parseResponse(redisReaderResponse);
+        Local<Value> jsArgv[] = {ret_value};
+        resolve->Call(context, context->Global(), 1, jsArgv);
+    }
+    
+cleanup:
+    if(redisReaderResponse != NULL)
+        freeReplyObject(redisReaderResponse);
+//    redisReaderFree(reader);
+    for (int j = 0; j < c->argc; j++) {
+        robj *o = c->argv[j];
+        decrRefCount(o);
+    }
+    
+    if (c->argv != argv) {
+        zfree(c->argv);
+        argv = NULL;
+        argv_size = 0;
+    }
+    
+    if(reply != NULL && reply != c->buf)
+        sdsfree(reply);
 }
 
 void remoteDBCall(const v8::FunctionCallbackInfo<v8::Value>& args) {
@@ -213,7 +333,7 @@ void remoteDBCall(const v8::FunctionCallbackInfo<v8::Value>& args) {
 }
 
 void DBCall(const v8::FunctionCallbackInfo<v8::Value>& args) {
-    serverLog(LL_WARNING,"DBCall");
+    //serverLog(LL_WARNING,"DBCall");
     bool isLocal = true;
     if(args.Length() > 1) {
         //check hash
@@ -242,6 +362,15 @@ void initV8() {
                 v8::String::NewFromUtf8(isolate, "log", v8::NewStringType::kNormal).ToLocalChecked(),
                 v8::FunctionTemplate::New(isolate, redisLog)
     );
+    
+//    global->Set(
+//                v8::String::NewFromUtf8(isolate, "__httpResolve", v8::NewStringType::kNormal).ToLocalChecked(),
+//                v8::FunctionTemplate::New(isolate, httpResolve)
+//                );
+//    global->Set(
+//                v8::String::NewFromUtf8(isolate, "__httpReject", v8::NewStringType::kNormal).ToLocalChecked(),
+//                v8::FunctionTemplate::New(isolate, httpReject)
+//                );
     
     v8::Local<v8::Context> context = Context::New(isolate, NULL, global);
     context_.Reset(isolate, context);
