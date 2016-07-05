@@ -58,11 +58,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "src/scripting-v8-http.cc"
-            timestampString = "489411490.493538"
+            timestampString = "489428527.089477"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "208"
-            endingLineNumber = "208"
+            startingLineNumber = "244"
+            endingLineNumber = "244"
             landmarkName = "httpAdminEvalCommand(HttpContext *c)"
             landmarkType = "7">
          </BreakpointContent>
@@ -74,11 +74,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "src/scripting-v8-http.cc"
-            timestampString = "489411490.493538"
+            timestampString = "489428527.089477"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "211"
-            endingLineNumber = "211"
+            startingLineNumber = "247"
+            endingLineNumber = "247"
             landmarkName = "httpAdminEvalCommand(HttpContext *c)"
             landmarkType = "7">
          </BreakpointContent>
@@ -90,11 +90,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "src/scripting-v8-http.cc"
-            timestampString = "489411490.493538"
+            timestampString = "489428527.089477"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "218"
-            endingLineNumber = "218"
+            startingLineNumber = "254"
+            endingLineNumber = "254"
             landmarkName = "httpAdminEvalCommand(HttpContext *c)"
             landmarkType = "7">
          </BreakpointContent>
@@ -106,11 +106,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "src/scripting-v8-http.cc"
-            timestampString = "489411490.493538"
+            timestampString = "489428527.089477"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "198"
-            endingLineNumber = "198"
+            startingLineNumber = "234"
+            endingLineNumber = "234"
             landmarkName = "httpAdminEvalCommand(HttpContext *c)"
             landmarkType = "7">
          </BreakpointContent>
@@ -122,11 +122,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "src/scripting-v8-http.cc"
-            timestampString = "489411490.493538"
+            timestampString = "489428527.089477"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "202"
-            endingLineNumber = "202"
+            startingLineNumber = "238"
+            endingLineNumber = "238"
             landmarkName = "httpAdminEvalCommand(HttpContext *c)"
             landmarkType = "7">
          </BreakpointContent>
@@ -138,11 +138,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "src/scripting-v8-http.cc"
-            timestampString = "489411490.493538"
+            timestampString = "489428527.089477"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "195"
-            endingLineNumber = "195"
+            startingLineNumber = "231"
+            endingLineNumber = "231"
             landmarkName = "httpAdminEvalCommand(HttpContext *c)"
             landmarkType = "7">
          </BreakpointContent>
@@ -154,11 +154,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "src/scripting-v8-http.cc"
-            timestampString = "489411490.493538"
+            timestampString = "489429129.082126"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "490"
-            endingLineNumber = "490"
+            startingLineNumber = "577"
+            endingLineNumber = "577"
             landmarkName = "initHttp()"
             landmarkType = "7">
          </BreakpointContent>
@@ -170,11 +170,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "src/scripting-v8-http.cc"
-            timestampString = "489411490.493538"
+            timestampString = "489428527.089477"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "217"
-            endingLineNumber = "217"
+            startingLineNumber = "253"
+            endingLineNumber = "253"
             landmarkName = "httpAdminEvalCommand(HttpContext *c)"
             landmarkType = "7">
          </BreakpointContent>
@@ -186,11 +186,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "src/scripting-v8-http.cc"
-            timestampString = "489411490.493538"
+            timestampString = "489428527.089477"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "161"
-            endingLineNumber = "161"
+            startingLineNumber = "197"
+            endingLineNumber = "197"
             landmarkName = "httpResolve(const v8::FunctionCallbackInfo&lt;v8::Value&gt;&amp; args)"
             landmarkType = "7">
          </BreakpointContent>
@@ -202,11 +202,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "src/scripting-v8-http.cc"
-            timestampString = "489411490.493538"
+            timestampString = "489428527.089477"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "174"
-            endingLineNumber = "174"
+            startingLineNumber = "210"
+            endingLineNumber = "210"
             landmarkName = "httpReject(const v8::FunctionCallbackInfo&lt;v8::Value&gt;&amp; args)"
             landmarkType = "7">
          </BreakpointContent>
@@ -218,11 +218,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "src/scripting-v8-http.cc"
-            timestampString = "489411490.493538"
+            timestampString = "489428527.089477"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "165"
-            endingLineNumber = "165"
+            startingLineNumber = "201"
+            endingLineNumber = "201"
             landmarkName = "httpResolve(const v8::FunctionCallbackInfo&lt;v8::Value&gt;&amp; args)"
             landmarkType = "7">
          </BreakpointContent>
@@ -233,12 +233,282 @@
             shouldBeEnabled = "No"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
-            filePath = "src/scripting-v8-http.cc"
-            timestampString = "489411490.493538"
+            filePath = "src/scripting-v8.cc"
+            timestampString = "489415993.554442"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "176"
-            endingLineNumber = "176"
+            startingLineNumber = "98"
+            endingLineNumber = "98"
+            landmarkName = "redisCall(const v8::FunctionCallbackInfo&lt;v8::Value&gt;&amp; args)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "src/scripting-v8.cc"
+            timestampString = "489415971.594127"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "128"
+            endingLineNumber = "128"
+            landmarkName = "redisCall(const v8::FunctionCallbackInfo&lt;v8::Value&gt;&amp; args)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "src/scripting-v8.cc"
+            timestampString = "489420750.313852"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "277"
+            endingLineNumber = "277"
+            landmarkName = "DBCall(const v8::FunctionCallbackInfo&lt;v8::Value&gt;&amp; args)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "src/t_string.c"
+            timestampString = "489416302.082026"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "342"
+            endingLineNumber = "342"
+            landmarkName = "incrDecrCommand()"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "src/server.c"
+            timestampString = "489417937.824943"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "2106"
+            endingLineNumber = "2106"
+            landmarkName = "lookupCommand()"
+            landmarkType = "7">
+            <Locations>
+               <Location
+                  shouldBeEnabled = "No"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "commandCommand"
+                  moduleName = "redis-server"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/h0x91b/Desktop/TheBox/redis-v8/src/server.c"
+                  timestampString = "489419256.788142"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "2106"
+                  endingLineNumber = "2106"
+                  offsetFromSymbolStart = "355">
+               </Location>
+               <Location
+                  shouldBeEnabled = "No"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "lookupCommand"
+                  moduleName = "redis-server"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/h0x91b/Desktop/TheBox/redis-v8/src/server.c"
+                  timestampString = "489419256.788233"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "2106"
+                  endingLineNumber = "2106"
+                  offsetFromSymbolStart = "7">
+               </Location>
+               <Location
+                  shouldBeEnabled = "No"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "processCommand"
+                  moduleName = "redis-server"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/h0x91b/Desktop/TheBox/redis-v8/src/server.c"
+                  timestampString = "489419256.78831"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "2106"
+                  endingLineNumber = "2106"
+                  offsetFromSymbolStart = "48">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "src/object.c"
+            timestampString = "489418435.534038"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "71"
+            endingLineNumber = "71"
+            landmarkName = "createRawStringObject()"
+            landmarkType = "7">
+            <Locations>
+               <Location
+                  shouldBeEnabled = "No"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "createRawStringObject"
+                  moduleName = "redis-server"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/h0x91b/Desktop/TheBox/redis-v8/src/object.c"
+                  timestampString = "489419256.789048"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "71"
+                  endingLineNumber = "71"
+                  offsetFromSymbolStart = "4">
+               </Location>
+               <Location
+                  shouldBeEnabled = "No"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "createStringObject"
+                  moduleName = "redis-server"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/h0x91b/Desktop/TheBox/redis-v8/src/object.c"
+                  timestampString = "489419256.789139"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "71"
+                  endingLineNumber = "71"
+                  offsetFromSymbolStart = "108">
+               </Location>
+               <Location
+                  shouldBeEnabled = "No"
+                  ignoreCount = "0"
+                  continueAfterRunningActions = "No"
+                  symbolName = "dupStringObject"
+                  moduleName = "redis-server"
+                  usesParentBreakpointCondition = "Yes"
+                  urlString = "file:///Users/h0x91b/Desktop/TheBox/redis-v8/src/object.c"
+                  timestampString = "489419256.789213"
+                  startingColumnNumber = "9223372036854775807"
+                  endingColumnNumber = "9223372036854775807"
+                  startingLineNumber = "71"
+                  endingLineNumber = "71"
+                  offsetFromSymbolStart = "235">
+               </Location>
+            </Locations>
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "src/scripting-v8-http.cc"
+            timestampString = "489429129.082126"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "615"
+            endingLineNumber = "615"
+            landmarkName = "initHttp()"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "src/scripting-v8-http.cc"
+            timestampString = "489429129.082126"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "607"
+            endingLineNumber = "607"
+            landmarkName = "initHttp()"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "src/scripting-v8-http.cc"
+            timestampString = "489429129.082126"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "604"
+            endingLineNumber = "604"
+            landmarkName = "initHttp()"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "src/scripting-v8-http.cc"
+            timestampString = "489429129.082126"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "614"
+            endingLineNumber = "614"
+            landmarkName = "initHttp()"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "src/scripting-v8-http.cc"
+            timestampString = "489429129.082126"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "633"
+            endingLineNumber = "633"
+            landmarkName = "initHttp()"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "Yes"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "src/scripting-v8-http.cc"
+            timestampString = "489428566.509067"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "211"
+            endingLineNumber = "211"
             landmarkName = "httpReject(const v8::FunctionCallbackInfo&lt;v8::Value&gt;&amp; args)"
             landmarkType = "7">
          </BreakpointContent>
@@ -249,13 +519,13 @@
             shouldBeEnabled = "Yes"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
-            filePath = "src/scripting-v8.cc"
-            timestampString = "489413898.631997"
+            filePath = "src/scripting-v8-http.cc"
+            timestampString = "489429129.082126"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "101"
-            endingLineNumber = "101"
-            landmarkName = "redisCall(const v8::FunctionCallbackInfo&lt;v8::Value&gt;&amp; args)"
+            startingLineNumber = "295"
+            endingLineNumber = "295"
+            landmarkName = "httpProcedureCall(HttpContext *c)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>

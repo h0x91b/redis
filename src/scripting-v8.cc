@@ -224,9 +224,7 @@ void DBCall(const v8::FunctionCallbackInfo<v8::Value>& args) {
     if(!isLocal) {
         return remoteDBCall(args);
     }
-    
-    //serverLog(LL_WARNING,"localDBCall");
-    
+        
     HandleScope handle_scope(isolate);
     v8::Local<v8::Context> context = v8::Local<v8::Context>::New(isolate, context_);
     v8::Context::Scope context_scope(context);
@@ -246,7 +244,8 @@ void DBCall(const v8::FunctionCallbackInfo<v8::Value>& args) {
     int call_flags = CMD_CALL_SLOWLOG | CMD_CALL_STATS;
     
     if (argv_size < argc) {
-        argv = (robj **)zrealloc(argv,sizeof(robj*)*argc);
+        argv = (robj **)zrealloc(argv, sizeof(robj*)*argc);
+//        memset((void*)argv, 0, sizeof(robj*)*argc);
         argv_size = argc;
     }
     
@@ -254,6 +253,22 @@ void DBCall(const v8::FunctionCallbackInfo<v8::Value>& args) {
         v8::HandleScope handle_scope(isolate);
         v8::String::Utf8Value str( args[i]->ToString() );
         argv[i-1] = createStringObject(*str, str.length());
+//        if(!argv[i-1]){
+//            argv[i-1] = createRawStringObject(*str, str.length());
+//        } else {
+//            //reuse
+//            robj *o = (robj*)argv[i-1];
+//            sds s = (sds)o->ptr;
+//            if(!o->type != OBJ_STRING || o->encoding != OBJ_ENCODING_RAW || !o->ptr || sdsAllocSize(s) < str.length()) {
+////                printf("#%d sdsAllocSize(s) %d, needed size %d\n", i-1, sdsAllocSize(s), str.length());
+//                decrRefCount(o);
+//                argv[i-1] = createRawStringObject(*str, str.length());
+//            } else {
+//                memcpy(s, *str, str.length());
+//                s[str.length()] = '\0';
+//                sdsupdatelen(s);
+//            }
+//        }
     }
     
     c->argv = argv;

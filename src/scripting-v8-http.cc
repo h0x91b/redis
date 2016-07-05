@@ -9,22 +9,27 @@ extern "C" {
 }
 
 Global<Function> __adminEval;
+Global<Function> __procedureCall;
 Global<Object> DB;
+Global<Object> JSON;
+Global<Function> stringify;
 extern v8::Platform* platform;
 extern Isolate* isolate;
 extern Global<Context> context_;
 extern void DBCall(const v8::FunctionCallbackInfo<v8::Value>& args);
 
-//Global<Context> context_DB;
 char neterrbuf[256];
 int httpServer;
 
 const char *COREJSAPI = R"COREAPI(
+"use strict"
 var DB = {};
 log('CoreJSApi');
 function InitDB(DBCall, httpResolve, httpReject) {
     log('InitDB');
     var procedures = new Map();
+    var schemeCounter = new Map([['tweetsInSystem', {someSettings:{}}]]);
+    
     DB.DBCall = DBCall;
 //    var userFunc;
     DB.__adminEval = function __adminEval(context, userCode, req, res){
@@ -40,9 +45,34 @@ function InitDB(DBCall, httpResolve, httpReject) {
             }
         }
     };
-    DB.__registerProcedure = function __registerProcedure(opts, name, version, cb) {
-        if(arguments.length != 4) throw new Error('Wrong arguments count');
-        if(!Number.isNumber(version)) throw new Error('Version must be a number');
+    DB.__procedureCall = function __procedureCall(context, path, query, body, req, res) {
+        var version = 1;
+        var fullName = version + '%' + path;
+        var procedure = procedures.get(fullName);
+        if(!procedure) {
+            httpReject(context, JSON.stringify({Error: 'Procedure "'+fullName+'" not found'}));
+            return;
+        }
+        procedure.cb(req, res, cb);
+        function cb(err, data) {
+            if(err) {
+                httpReject(context, JSON.stringify({Error:err}));
+            } else {
+                httpResolve(context, JSON.stringify({Error:null, Data: data}));
+            }
+        }
+    };
+    DB.__registerProcedure = function __registerProcedure(opts, name, version, userCode) {
+        log('__registerProcedure');
+        if(arguments.length != 4) {
+            log('wrong args');
+            throw new Error('Wrong arguments count');
+        }
+        if(!Number.isInteger(version)) {
+            log('bad version');
+            throw new Error('Version must be a number');
+        }
+        var cb = new Function('req', 'res', 'cb', '"use strict"\n' + userCode);
         var p = {
             opts: opts,
             name: name,
@@ -51,6 +81,10 @@ function InitDB(DBCall, httpResolve, httpReject) {
         };
         //7%blog/page/comment/replyTo
         var fullName = p.version + '%' + p.name;
+        log(fullName);
+        if(procedures.has(fullName)) {
+            throw new Error('Procedure with such name already exists');
+        }
         procedures.set(fullName, p);
     };
     
@@ -59,9 +93,10 @@ function InitDB(DBCall, httpResolve, httpReject) {
             log(e);
         }
     }
+    
     function Counter(name) {
         this.name = name;
-        if(!true) {
+        if(!schemeCounter.has(name)) {
             throw new Error('Counter with name `'+name+'` is not defined');
         }
     }
@@ -89,6 +124,7 @@ function InitDB(DBCall, httpResolve, httpReject) {
         return this.set(0, cb);
     }
     
+    DB.__registerProcedure({}, 'hello/world', 1, 'throw new Error("aaa"); DB.Counter.load("tweetsInSystem").incr().decr().incrBy(1, cb);');
     
     DB.Counter = Counter;
     //Object.freeze(DB);
@@ -106,7 +142,7 @@ void httpWriteResponse(aeEventLoop *el, int fd, void *privdata, int mask) {
     resp[0] = '\0';
     sdsupdatelen(resp);
     
-    resp = sdscatprintf(resp, "HTTP/1.1 %s\r\nServer: Redis-v8\r\nContent-Type: application\\json\r\nConnection: Keep-Alive\r\nContent-Length: %zu\r\n\r\n%s", c->status, sdslen(c->response), c->response);
+    resp = sdscatprintf(resp, "HTTP/1.1 %s\r\nServer: Redis-v8\r\nContent-Type: application\\json\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Headers: Content-Type, If-None-Match, If-Modified-Since, Origin\r\nConnection: Keep-Alive\r\nContent-Length: %zu\r\n\r\n%s", c->status, sdslen(c->response), c->response);
     
     if(write(fd, resp, sdslen(resp)) > 0) {
         aeDeleteFileEvent(server.el, fd, AE_WRITABLE);
@@ -221,6 +257,57 @@ void httpAdminEvalCommand(HttpContext *c) {
 //    httpResponseReady(c);
 }
 
+void httpProcedureCall(HttpContext *c) {
+#ifdef DEVELOPER
+    serverLog(LL_VERBOSE,"httpProcedureCall");
+#endif
+    if(c->method != HTTP_POST) {
+        httpPrepareResponse(c, sdsnew("400 Bad request"), sdsnew("{\"Error\":\"400 Bad Request\",\"Code\":400,\"Data\":\"Wrong request method\"}"));
+        httpResponseReady(c);
+        return;
+    }
+    
+    Isolate::Scope isolate_scope(isolate);
+    HandleScope handle_scope(isolate);
+    
+    v8::Local<v8::Context> context = v8::Local<v8::Context>::New(isolate, context_);
+    v8::Context::Scope context_scope(context);
+    
+    TryCatch trycatch(isolate);
+    Local<Function> procedureCall = v8::Local<v8::Function>::New(isolate, __procedureCall);
+    Local<String> jsBody;
+    String::NewFromUtf8(isolate, c->body, NewStringType::kNormal, sdslen(c->body)).ToLocal(&jsBody);
+    Local<String> jsPath = String::NewFromUtf8(isolate, c->path + 4, NewStringType::kNormal, sdslen(c->path) - 4).ToLocalChecked();
+    Local<Value> jsQuery;
+    if(c->query)
+        String::NewFromUtf8(isolate, c->query, NewStringType::kNormal, sdslen(c->query)).ToLocal(&jsQuery);
+    else
+        jsQuery = Null(isolate);
+    Local<Object> reqObj = Object::New(isolate);
+    Local<Object> resObj = Object::New(isolate);
+    const int argc = 6;
+    Local<External> httpContext = External::New(isolate, (void*)c);
+    Local<Value> argv[argc] = {httpContext, jsPath, jsQuery, jsBody, reqObj, resObj};
+    Local<Value> result;
+    if(!procedureCall->Call(context, context->Global(), argc, argv).ToLocal(&result)) {
+        String::Utf8Value error(trycatch.Exception());
+        serverLog(LL_WARNING, "JS Runtime exception %s\n", *error);
+        
+        Local<Object> resp = Object::New(isolate);
+        resp->Set(context, String::NewFromUtf8(isolate, "Error", NewStringType::kNormal).ToLocalChecked(), trycatch.Exception());
+        resp->Set(context, String::NewFromUtf8(isolate, "Stack", NewStringType::kNormal).ToLocalChecked(), trycatch.StackTrace());
+        
+        Local<Value> argv[] = {resp};
+        Local<Value> result;
+        Local<Function>::New(isolate, stringify)->Call(context, Local<Object>::New(isolate, ::JSON), 1, argv).ToLocal(&result);
+        
+        String::Utf8Value jsonStr(result);
+        httpPrepareResponse(c, sdsnew("503 Service Unavailable"), sdsnewlen(*jsonStr, jsonStr.length()));
+        httpResponseReady(c);
+        return;
+    }
+}
+
 int onMessageComplete(http_parser *parser) {
     HttpContext *c = (HttpContext*)parser->data;
     
@@ -243,8 +330,12 @@ int onMessageComplete(http_parser *parser) {
         httpResponse404(c);
         return 0;
     }
-    if(sdslen(c->path) == 8 && !strncmp(c->path, "/_f/eval", 8)) {
+    if(sdslen(c->path) == 8 && !strncmp(c->path+4, "eval", 4)) {
         httpAdminEvalCommand(c);
+        return 0;
+    }
+    if(sdslen(c->path) > 4 && !strncmp(c->path, "/_f/", 4)) {
+        httpProcedureCall(c);
         return 0;
     }
     
@@ -401,11 +492,7 @@ void httpRequestHandler(aeEventLoop *el, int fd, void *privdata, int mask) {
         return;
     }
     nextValueConnection = FALSE;
-    int nparsed = http_parser_execute(c->parser, &settings, buf, nread);
-#ifdef DEVELOPER
-    serverLog(LL_VERBOSE,"readed %d bytes %.*s", nread, nread, buf);
-    serverLog(LL_VERBOSE,"nparsed %d bytes", nparsed);
-#endif
+    http_parser_execute(c->parser, &settings, buf, nread);
 }
 
 HttpContext *allocHttpClient(int fd) {
@@ -515,16 +602,20 @@ void initHttp() {
                         sdslen(code)
                         ).ToLocal(&source);
     Local<Script> script;
-    
-    if(!Script::Compile(context, source).ToLocal(&script)) {
+    ScriptOrigin origin(String::NewFromUtf8(isolate, "DBCoreAPI.js", NewStringType::kNormal).ToLocalChecked());
+    if(!Script::Compile(context, source, &origin).ToLocal(&script)) {
         String::Utf8Value error(trycatch.Exception());
-        serverLog(LL_WARNING, "JS Compile exception %s\nCode: %.*s", *error, sdslen(code), code);
+        serverLog(LL_WARNING, "JS Compile exception %s\nCode: %.*s", *error, (int)sdslen(code), code);
+        String::Utf8Value stack(trycatch.StackTrace());
+        serverLog(LL_WARNING, "Stacktrace: %s\n", *stack);
         return;
     }
     Local<Value> result;
     if(!script->Run(context).ToLocal(&result)) {
         String::Utf8Value error(trycatch.Exception());
         serverLog(LL_WARNING, "JS Runtime exception %s\n", *error);
+        String::Utf8Value stack(trycatch.StackTrace());
+        serverLog(LL_WARNING, "Stacktrace: %s\n", *stack);
         return;
     }
     
@@ -538,16 +629,31 @@ void initHttp() {
     const int argc = 3;
     Local<Value> argv[argc] = {DBCallFun, __httpResolve, __httpReject};
     InitDB->Call(context, context->Global(), argc, argv);
+    if(trycatch.HasCaught()) {
+        String::Utf8Value error(trycatch.Exception());
+        serverLog(LL_WARNING, "JS Runtime exception %s\n", *error);
+        String::Utf8Value stack(trycatch.StackTrace());
+        serverLog(LL_WARNING, "Stacktrace: %s\n", *stack);
+        return;
+    }
     
-    Local<Value> adminEvalVal, DBVal;
+    Local<Value> adminEvalVal, DBVal, procedureCallVal, JSONVal, stringifyVal;
     context->Global()->Get(context, String::NewFromUtf8(isolate, "DB", NewStringType::kNormal).ToLocalChecked()).ToLocal(&DBVal);
     Local<Object> DB = Local<Object>::Cast(DBVal);
     ::DB.Reset(isolate, DB);
     
     DB->Get(context, String::NewFromUtf8(isolate, "__adminEval", NewStringType::kNormal).ToLocalChecked()).ToLocal(&adminEvalVal);
     Local<Function> adminEval = Local<Function>::Cast(adminEvalVal);
+    DB->Get(context, String::NewFromUtf8(isolate, "__procedureCall", NewStringType::kNormal).ToLocalChecked()).ToLocal(&procedureCallVal);
+    Local<Function> procedureCall = Local<Function>::Cast(procedureCallVal);
+    context->Global()->Get(context, String::NewFromUtf8(isolate, "JSON", NewStringType::kNormal).ToLocalChecked()).ToLocal(&JSONVal);
+    ::JSON.Reset(isolate, JSONVal->ToObject());
+    
+    JSONVal->ToObject()->Get(context, String::NewFromUtf8(isolate, "stringify", NewStringType::kNormal).ToLocalChecked()).ToLocal(&stringifyVal);
     
     __adminEval.Reset(isolate, adminEval);
+    __procedureCall.Reset(isolate, procedureCall);
+    stringify.Reset(isolate, Local<Function>::Cast(stringifyVal));
     sdsfree(code);
     serverLog(LL_WARNING,"Init HTTP done");
     //context_DB.Reset(isolate, *context);
