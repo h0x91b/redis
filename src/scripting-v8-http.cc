@@ -30,17 +30,6 @@ function InitDB(DBCall, httpResolve, httpReject) {
     DB.__adminEval = function __adminEval(context, userCode, req, res){
         "use strict";
         var userFunc = new Function('req', 'res', 'cb', '"use strict"\n' + userCode);
-//        if(!userFunc)
-//            userFunc = new Function('context', 'req', 'res', 'resolve', 'reject', '"use strict"\n' + userCode);
-//        var p = new Promise(function promiseUserFunc(eresolve, ereject){
-//            userFunc(req, res, eresolve, ereject);
-//        });
-//        p.then((data) => {
-//            httpResolve(context, JSON.stringify({Error:null, Data: data}));
-//        });
-//        p.catch((err) => {
-//            httpReject(context, JSON.stringify({Error:err.toString(), Stack: err.stack}));
-//        });
         userFunc(req, res, cb);
         
         function cb(err, data) {
@@ -65,32 +54,40 @@ function InitDB(DBCall, httpResolve, httpReject) {
         procedures.set(fullName, p);
     };
     
-    //promises works like shit, 56k vs 35k with promises, each one extra promise use ~20%...
+    function noCallback(e, data) {
+        if(e) {
+            log(e);
+        }
+    }
     function Counter(name) {
         this.name = name;
         if(!true) {
             throw new Error('Counter with name `'+name+'` is not defined');
         }
     }
-    Counter.load = function(name) { return new Counter(name); }
-    Counter.prototype.get = function() { return this.incrBy(0); }
-    Counter.prototype.set = function(num) {
-        var self = this;
-        var p = new Promise(function(resolve, reject){
-            DBCall(() => { resolve(num); }, reject, 'SET', 'INCR:'+self.name, num);
-        });
-        return p;
+    Counter.load = function(name) {
+        return new Counter(name);
     }
-    Counter.prototype.incr = function() { return this.incrBy(1); }
-    Counter.prototype.decr = function() { return this.incrBy(-1); }
-    Counter.prototype.incrBy = function(num) {
-        var self = this;
-        var p = new Promise(function(resolve, reject){
-            DBCall(resolve, reject, 'INCRBY', 'INCR:'+self.name, num);
-        });
-        return p;
+    Counter.prototype.get = function(cb = noCallback) {
+        return this.incrBy(0, cb);
+    }
+    Counter.prototype.set = function(num, cb = noCallback) {
+        DBCall(cb, 'SET', 'INCR:'+this.name, num);
+        return this;
+    }
+    Counter.prototype.incr = function(cb = noCallback) {
+        return this.incrBy(1, cb);
+    }
+    Counter.prototype.decr = function(cb = noCallback) {
+        return this.incrBy(-1, cb);
+    }
+    Counter.prototype.incrBy = function(num, cb = noCallback) {
+        DBCall(cb, 'INCRBY', 'INCR:'+this.name, num);
+        return this;
     };
-    Counter.prototype.flush = function() { return this.set(0); }
+    Counter.prototype.flush = function(cb = noCallback) {
+        return this.set(0, cb);
+    }
     
     
     DB.Counter = Counter;
