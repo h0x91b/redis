@@ -216,7 +216,7 @@ void remoteDBCall(const v8::FunctionCallbackInfo<v8::Value>& args) {
 }
 
 void DBCall(const v8::FunctionCallbackInfo<v8::Value>& args) {
-    //serverLog(LL_WARNING,"DBCall");
+    serverLog(LL_WARNING,"DBCall");
     bool isLocal = true;
     if(args.Length() > 1) {
         //check hash
@@ -245,7 +245,7 @@ void DBCall(const v8::FunctionCallbackInfo<v8::Value>& args) {
     
     if (argv_size < argc) {
         argv = (robj **)zrealloc(argv, sizeof(robj*)*argc);
-//        memset((void*)argv, 0, sizeof(robj*)*argc);
+        //memset((void*)argv, 0, sizeof(robj*)*argc);
         argv_size = argc;
     }
     
@@ -253,6 +253,8 @@ void DBCall(const v8::FunctionCallbackInfo<v8::Value>& args) {
         v8::HandleScope handle_scope(isolate);
         v8::String::Utf8Value str( args[i]->ToString() );
         argv[i-1] = createStringObject(*str, str.length());
+        printf("#%d createStringObject %s addr: %16X refcount %d\n", i-1, *str, argv[i-1], argv[i-1]->refcount);
+// reuse
 //        if(!argv[i-1]){
 //            argv[i-1] = createRawStringObject(*str, str.length());
 //        } else {
@@ -335,8 +337,6 @@ void DBCall(const v8::FunctionCallbackInfo<v8::Value>& args) {
         callback->Call(context, context->Global(), 2, argv);
     } else {
         ret_value = parseResponse(redisReaderResponse);
-        Local<Value> jsArgv[] = {Null(isolate), ret_value};
-        callback->Call(context, context->Global(), 2, jsArgv);
     }
     
 cleanup:
@@ -345,6 +345,7 @@ cleanup:
     //    redisReaderFree(reader);
     for (int j = 0; j < c->argc; j++) {
         robj *o = c->argv[j];
+        printf("j=%d refcount=%d\n", j, o->refcount);
         decrRefCount(o);
     }
     
@@ -356,6 +357,11 @@ cleanup:
     
     if(reply != NULL && reply != c->buf)
         sdsfree(reply);
+    
+    if(!ret_value.IsEmpty()) {
+        Local<Value> jsArgv[] = {Null(isolate), ret_value};
+        callback->Call(context, context->Global(), 2, jsArgv);
+    }
 }
 
 void initV8() {

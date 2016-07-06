@@ -46,8 +46,20 @@ function InitDB(DBCall, httpResolve, httpReject) {
                 cb: pAdminListProcedures
             }
         ],
+        [
+            '1%admin/get-stats', {
+                listed: false,
+                opts: {},
+                name: 'admin/get-stats',
+                version: 1,
+                cb: pAdminGetStats
+            }
+        ]
     ]);
-    var schemeCounter = new Map([['tweetsInSystem', {listed: true, someSettings:{}}]]);
+    var schemeCounter = new Map([
+        ['tweetsInSystem', {listed: true, someSettings:{}}],
+        ['adminProcedureCalls', {listed: false, someSettings:{}}],
+    ]);
     
     DB.DBCall = DBCall;
 //    var userFunc;
@@ -90,6 +102,7 @@ function InitDB(DBCall, httpResolve, httpReject) {
             httpReject(context, JSON.stringify({Error: 'Procedure "'+fullName+'" not found'}), '404 Not Found');
             return;
         }
+        Counter.incr('adminProcedureCalls');
         procedure.cb(req, res, cb);
         function cb(err, data) {
             if(err) {
@@ -152,6 +165,31 @@ function InitDB(DBCall, httpResolve, httpReject) {
         cb(null, ret);
     }
     
+    function pAdminGetStats(req, res, cb) {
+        var counters = ['adminProcedureCalls', 'tweetsInSystem'];
+        var index = 0;
+        var stats = {
+            totals: {}
+        };
+        next();
+        function next() {
+            var name = counters[index++];
+            log(name, index, counters);
+            Counter.get(name, onResp);
+            
+            function onResp(e, data) {
+                if(e) return cb(e);
+                stats.totals[name] = data;
+                if(index == counters.length) {
+                    log('index == counters.length');
+                    cb(null, stats);
+                } else {
+                    next();
+                }
+            }
+        }
+    }
+    
     function noCallback(e, data) {
         if(e) {
             log(e);
@@ -159,6 +197,9 @@ function InitDB(DBCall, httpResolve, httpReject) {
     }
     
     function Counter(name) {
+        if(!name) {
+            throw new Error('Missing name');
+        }
         this.name = name;
         if(!schemeCounter.has(name)) {
             throw new Error('Counter with name `'+name+'` is not defined');
@@ -166,27 +207,47 @@ function InitDB(DBCall, httpResolve, httpReject) {
     }
     Counter.load = function(name) {
         return new Counter(name);
-    }
+    };
+    Counter.get = function(name, cb = noCallback) {
+        return Counter.incrBy(name, 0, cb);
+    };
     Counter.prototype.get = function(cb = noCallback) {
         return this.incrBy(0, cb);
-    }
+    };
+    Counter.set = function(name, num, cb = noCallback) {
+        DBCall(cb, 'SET', 'INCR:'+name, num);
+        return Counter;
+    };
     Counter.prototype.set = function(num, cb = noCallback) {
         DBCall(cb, 'SET', 'INCR:'+this.name, num);
         return this;
-    }
+    };
+    Counter.incr = function(name, cb = noCallback) {
+        return Counter.incrBy(name, 1, cb);
+    };
     Counter.prototype.incr = function(cb = noCallback) {
         return this.incrBy(1, cb);
-    }
+    };
+    Counter.decr = function(name, cb = noCallback) {
+        return Counter.incrBy(name, -1, cb);
+    };
     Counter.prototype.decr = function(cb = noCallback) {
         return this.incrBy(-1, cb);
-    }
+    };
+    Counter.incrBy = function(name, num, cb = noCallback) {
+        DBCall(cb, 'INCRBY', 'INCR:'+name, num);
+        return Counter;
+    };
     Counter.prototype.incrBy = function(num, cb = noCallback) {
         DBCall(cb, 'INCRBY', 'INCR:'+this.name, num);
         return this;
     };
+    Counter.flush = function(name, cb = noCallback) {
+        return Counter.set(name, 0, cb);
+    };
     Counter.prototype.flush = function(cb = noCallback) {
         return this.set(0, cb);
-    }
+    };
     
     DB.Counter = Counter;
     //Object.freeze(DB);

@@ -58,12 +58,12 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "src/scripting-v8-http.cc"
-            timestampString = "489490010.192065"
+            timestampString = "489495771.133458"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "297"
-            endingLineNumber = "297"
-            landmarkName = "httpAdminEvalCommand(HttpContext *c)"
+            startingLineNumber = "301"
+            endingLineNumber = "301"
+            landmarkName = "httpResponseReady(HttpContext *c)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -74,12 +74,26 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "src/scripting-v8-http.cc"
-            timestampString = "489490010.192065"
+            timestampString = "489495771.133458"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "300"
-            endingLineNumber = "300"
-            landmarkName = "httpAdminEvalCommand(HttpContext *c)"
+            startingLineNumber = "304"
+            endingLineNumber = "304">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "src/scripting-v8-http.cc"
+            timestampString = "489495771.133458"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "311"
+            endingLineNumber = "311"
+            landmarkName = "httpPrepareResponse(HttpContext *c, sds status, sds response)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -90,44 +104,12 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "src/scripting-v8-http.cc"
-            timestampString = "489490010.192065"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "307"
-            endingLineNumber = "307"
-            landmarkName = "httpAdminEvalCommand(HttpContext *c)"
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "src/scripting-v8-http.cc"
-            timestampString = "489490010.192065"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "287"
-            endingLineNumber = "287"
-            landmarkName = "httpAdminEvalCommand(HttpContext *c)"
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "src/scripting-v8-http.cc"
-            timestampString = "489490010.192065"
+            timestampString = "489495771.133458"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "291"
             endingLineNumber = "291"
-            landmarkName = "httpAdminEvalCommand(HttpContext *c)"
+            landmarkName = "onHeadersComplete(http_parser *parser)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -138,26 +120,12 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "src/scripting-v8-http.cc"
-            timestampString = "489490010.192065"
+            timestampString = "489495771.133458"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "284"
-            endingLineNumber = "284">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "src/scripting-v8-http.cc"
-            timestampString = "489490010.192065"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "630"
-            endingLineNumber = "630"
-            landmarkName = "httpAcceptHandler(aeEventLoop *el, int fd, void *privdata, int mask)"
+            startingLineNumber = "295"
+            endingLineNumber = "295"
+            landmarkName = "onHeadersComplete(http_parser *parser)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -168,12 +136,12 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "src/scripting-v8-http.cc"
-            timestampString = "489490010.192065"
+            timestampString = "489495771.133458"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "306"
-            endingLineNumber = "306"
-            landmarkName = "httpAdminEvalCommand(HttpContext *c)"
+            startingLineNumber = "288"
+            endingLineNumber = "288"
+            landmarkName = "onHeadersComplete(http_parser *parser)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -184,11 +152,27 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "src/scripting-v8-http.cc"
-            timestampString = "489490010.192065"
+            timestampString = "489495771.133458"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "244"
-            endingLineNumber = "244"
+            startingLineNumber = "634"
+            endingLineNumber = "634"
+            landmarkName = "allocHttpClient(int fd)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "src/scripting-v8-http.cc"
+            timestampString = "489495771.133458"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "310"
+            endingLineNumber = "310"
             landmarkName = "httpPrepareResponse(HttpContext *c, sds status, sds response)"
             landmarkType = "7">
          </BreakpointContent>
@@ -200,28 +184,44 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "src/scripting-v8-http.cc"
-            timestampString = "489490010.192065"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "257"
-            endingLineNumber = "257"
-            landmarkName = "httpResponse404(HttpContext *c)"
-            landmarkType = "7">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "src/scripting-v8-http.cc"
-            timestampString = "489490010.192065"
+            timestampString = "489495771.133458"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "248"
             endingLineNumber = "248"
-            landmarkName = "httpPrepareResponse(HttpContext *c, sds status, sds response)"
+            landmarkName = "InitDB(DBCall, httpResolve, httpReject)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "src/scripting-v8-http.cc"
+            timestampString = "489495771.133458"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "261"
+            endingLineNumber = "261"
+            landmarkName = "httpWriteResponse(aeEventLoop *el, int fd, void *privdata, int mask)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "src/scripting-v8-http.cc"
+            timestampString = "489495771.133458"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "252"
+            endingLineNumber = "252"
+            landmarkName = "InitDB(DBCall, httpResolve, httpReject)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -264,11 +264,11 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "src/scripting-v8.cc"
-            timestampString = "489420750.313852"
+            timestampString = "489494567.152988"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "277"
-            endingLineNumber = "277"
+            startingLineNumber = "279"
+            endingLineNumber = "279"
             landmarkName = "DBCall(const v8::FunctionCallbackInfo&lt;v8::Value&gt;&amp; args)"
             landmarkType = "7">
          </BreakpointContent>
@@ -422,12 +422,12 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "src/scripting-v8-http.cc"
-            timestampString = "489490010.192065"
+            timestampString = "489495771.133458"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "668"
-            endingLineNumber = "668"
-            landmarkName = "initHttp()"
+            startingLineNumber = "672"
+            endingLineNumber = "672"
+            landmarkName = "httpAcceptHandler(aeEventLoop *el, int fd, void *privdata, int mask)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -438,12 +438,26 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "src/scripting-v8-http.cc"
-            timestampString = "489490010.192065"
+            timestampString = "489495771.133458"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "660"
-            endingLineNumber = "660"
-            landmarkName = "initHttp()"
+            startingLineNumber = "664"
+            endingLineNumber = "664">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "src/scripting-v8-http.cc"
+            timestampString = "489495771.133458"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "661"
+            endingLineNumber = "661"
+            landmarkName = "freeHttpClient(HttpContext *c)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -454,12 +468,12 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "src/scripting-v8-http.cc"
-            timestampString = "489490010.192065"
+            timestampString = "489495771.133458"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "657"
-            endingLineNumber = "657"
-            landmarkName = "initHttp()"
+            startingLineNumber = "671"
+            endingLineNumber = "671"
+            landmarkName = "httpAcceptHandler(aeEventLoop *el, int fd, void *privdata, int mask)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -470,12 +484,108 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "src/scripting-v8-http.cc"
-            timestampString = "489490010.192065"
+            timestampString = "489495771.133458"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "667"
-            endingLineNumber = "667"
-            landmarkName = "initHttp()"
+            startingLineNumber = "690"
+            endingLineNumber = "690"
+            landmarkName = "httpAcceptHandler(aeEventLoop *el, int fd, void *privdata, int mask)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "src/scripting-v8-http.cc"
+            timestampString = "489495771.133458"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "262"
+            endingLineNumber = "262"
+            landmarkName = "httpWriteResponse(aeEventLoop *el, int fd, void *privdata, int mask)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "src/scripting-v8-http.cc"
+            timestampString = "489495771.133458"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "352"
+            endingLineNumber = "352"
+            landmarkName = "httpAdminEvalCommand(HttpContext *c)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "src/scripting-v8-http.cc"
+            timestampString = "489495771.133458"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "265"
+            endingLineNumber = "265"
+            landmarkName = "httpWriteResponse(aeEventLoop *el, int fd, void *privdata, int mask)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "src/scripting-v8.cc"
+            timestampString = "489493488.826992"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "255"
+            endingLineNumber = "255"
+            landmarkName = "DBCall(const v8::FunctionCallbackInfo&lt;v8::Value&gt;&amp; args)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "src/scripting-v8.cc"
+            timestampString = "489494567.152988"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "311"
+            endingLineNumber = "311"
+            landmarkName = "DBCall(const v8::FunctionCallbackInfo&lt;v8::Value&gt;&amp; args)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "src/scripting-v8.cc"
+            timestampString = "489494567.152988"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "321"
+            endingLineNumber = "321"
+            landmarkName = "DBCall(const v8::FunctionCallbackInfo&lt;v8::Value&gt;&amp; args)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -485,13 +595,13 @@
             shouldBeEnabled = "Yes"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
-            filePath = "src/scripting-v8-http.cc"
-            timestampString = "489490010.192065"
+            filePath = "src/scripting-v8.cc"
+            timestampString = "489494567.152988"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "686"
-            endingLineNumber = "686"
-            landmarkName = "initHttp()"
+            startingLineNumber = "324"
+            endingLineNumber = "324"
+            landmarkName = "DBCall(const v8::FunctionCallbackInfo&lt;v8::Value&gt;&amp; args)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -501,27 +611,13 @@
             shouldBeEnabled = "No"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
-            filePath = "src/scripting-v8-http.cc"
-            timestampString = "489490010.192065"
+            filePath = "src/scripting-v8.cc"
+            timestampString = "489494483.656695"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "258"
-            endingLineNumber = "258">
-         </BreakpointContent>
-      </BreakpointProxy>
-      <BreakpointProxy
-         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
-         <BreakpointContent
-            shouldBeEnabled = "No"
-            ignoreCount = "0"
-            continueAfterRunningActions = "No"
-            filePath = "src/scripting-v8-http.cc"
-            timestampString = "489490010.192065"
-            startingColumnNumber = "9223372036854775807"
-            endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "348"
-            endingLineNumber = "348"
-            landmarkName = "httpProcedureCall(HttpContext *c)"
+            startingLineNumber = "256"
+            endingLineNumber = "256"
+            landmarkName = "DBCall(const v8::FunctionCallbackInfo&lt;v8::Value&gt;&amp; args)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -531,13 +627,93 @@
             shouldBeEnabled = "No"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
-            filePath = "src/scripting-v8-http.cc"
-            timestampString = "489490010.192065"
+            filePath = "src/scripting-v8.cc"
+            timestampString = "489495563.453847"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "261"
-            endingLineNumber = "261"
-            landmarkName = "httpResolve(const v8::FunctionCallbackInfo&lt;v8::Value&gt;&amp; args)"
+            startingLineNumber = "349"
+            endingLineNumber = "349"
+            landmarkName = "DBCall(const v8::FunctionCallbackInfo&lt;v8::Value&gt;&amp; args)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "src/object.c"
+            timestampString = "489494306.836007"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "302"
+            endingLineNumber = "302"
+            landmarkName = "decrRefCount()"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "src/scripting-v8.cc"
+            timestampString = "489494710.919674"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "303"
+            endingLineNumber = "303"
+            landmarkName = "DBCall(const v8::FunctionCallbackInfo&lt;v8::Value&gt;&amp; args)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "src/scripting-v8.cc"
+            timestampString = "489494712.451237"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "294"
+            endingLineNumber = "294"
+            landmarkName = "DBCall(const v8::FunctionCallbackInfo&lt;v8::Value&gt;&amp; args)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "src/scripting-v8.cc"
+            timestampString = "489494936.769626"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "302"
+            endingLineNumber = "302"
+            landmarkName = "DBCall(const v8::FunctionCallbackInfo&lt;v8::Value&gt;&amp; args)"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "src/scripting-v8.cc"
+            timestampString = "489495584.209426"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "362"
+            endingLineNumber = "362"
+            landmarkName = "DBCall(const v8::FunctionCallbackInfo&lt;v8::Value&gt;&amp; args)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
