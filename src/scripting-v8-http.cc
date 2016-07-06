@@ -27,8 +27,27 @@ var DB = {};
 log('CoreJSApi');
 function InitDB(DBCall, httpResolve, httpReject) {
     log('InitDB');
-    var procedures = new Map();
-    var schemeCounter = new Map([['tweetsInSystem', {someSettings:{}}]]);
+    var procedures = new Map([
+        [
+            '1%admin/register-procedure', {
+                listed: false,
+                opts: {},
+                name: 'admin/register-procedure',
+                version: 1,
+                cb: pAdminRegisterProcedure
+            }
+        ],
+        [
+            '1%admin/list-procedures', {
+                listed: false,
+                opts: {},
+                name: 'admin/list-procedures',
+                version: 1,
+                cb: pAdminListProcedures
+            }
+        ],
+    ]);
+    var schemeCounter = new Map([['tweetsInSystem', {listed: true, someSettings:{}}]]);
     
     DB.DBCall = DBCall;
 //    var userFunc;
@@ -47,23 +66,41 @@ function InitDB(DBCall, httpResolve, httpReject) {
     };
     DB.__procedureCall = function __procedureCall(context, path, query, body, req, res) {
         var version = 1;
-        var fullName = version + '%' + path;
+        var tmp, tmp2;
+        req.body = null;
+        req.query = {
+            pretty: false,
+            version: 1
+        };
+        res.status = '200 OK'; //??
+        res.headers = []; //??
+        if(query) {
+            tmp = query.split('&');
+            for(var i=0; i<tmp.length;i++) {
+                tmp2 = tmp[i].split('=');
+                req.query[tmp2[0]] = true;
+                if(tmp2[1])
+                    req.query[tmp2[0]] = tmp2[1];
+            }
+        }
+        var fullName = req.query.version + '%' + path;
         var procedure = procedures.get(fullName);
+        if(body) req.body = JSON.parse(body);
         if(!procedure) {
-            httpReject(context, JSON.stringify({Error: 'Procedure "'+fullName+'" not found'}));
+            httpReject(context, JSON.stringify({Error: 'Procedure "'+fullName+'" not found'}), '404 Not Found');
             return;
         }
         procedure.cb(req, res, cb);
         function cb(err, data) {
             if(err) {
-                httpReject(context, JSON.stringify({Error:err}));
+                httpReject(context, JSON.stringify({Error:err, Data: data}, null, req.query.pretty ? '\t' : ''), res.status, res.headers);
             } else {
-                httpResolve(context, JSON.stringify({Error:null, Data: data}));
+                httpResolve(context, JSON.stringify({Error:null, Data: data}, null, req.query.pretty ? '\t' : ''), res.status, res.headers);
             }
         }
     };
-    DB.__registerProcedure = function __registerProcedure(opts, name, version, userCode) {
-        log('__registerProcedure');
+    function registerProcedure(opts, name, version, userCode) {
+        log('registerProcedure');
         if(arguments.length != 4) {
             log('wrong args');
             throw new Error('Wrong arguments count');
@@ -77,7 +114,9 @@ function InitDB(DBCall, httpResolve, httpReject) {
             opts: opts,
             name: name,
             version: parseInt(version, 10),
-            cb: cb
+            listed: true,
+            cb: cb,
+            code: userCode
         };
         //7%blog/page/comment/replyTo
         var fullName = p.version + '%' + p.name;
@@ -85,8 +124,33 @@ function InitDB(DBCall, httpResolve, httpReject) {
         if(procedures.has(fullName)) {
             throw new Error('Procedure with such name already exists');
         }
+        Object.defineProperty(cb, 'name', {value: fullName});
         procedures.set(fullName, p);
     };
+    
+    function pAdminRegisterProcedure(req, res, cb) {
+        "use strict"
+        log('pAdminRegisterProcedure', JSON.stringify(req));
+        if(!req.body)
+            return cb('Missing POST body');
+        if(!req.body.name)
+            return cb('Missing name');
+        if(!req.body.version || !Number.isInteger(req.body.version))
+            return cb('Version must be an Integer');
+        if(!req.body.code)
+            return cb('Missing code');
+        registerProcedure({}, req.body.name, req.body.version, req.body.code);
+        cb(null, 'success');
+    }
+    
+    function pAdminListProcedures(req, res, cb) {
+        var ret = [];
+        for(var [k, v] of procedures) {
+            if(!v.listed) continue;
+            ret.push({name: v.name, version: v.version, code: v.code});
+        }
+        cb(null, ret);
+    }
     
     function noCallback(e, data) {
         if(e) {
@@ -123,8 +187,6 @@ function InitDB(DBCall, httpResolve, httpReject) {
     Counter.prototype.flush = function(cb = noCallback) {
         return this.set(0, cb);
     }
-    
-    DB.__registerProcedure({}, 'hello/world', 1, 'throw new Error("aaa"); DB.Counter.load("tweetsInSystem").incr().decr().incrBy(1, cb);');
     
     DB.Counter = Counter;
     //Object.freeze(DB);
@@ -209,8 +271,14 @@ void httpReject(const v8::FunctionCallbackInfo<v8::Value>& args) {
     serverLog(LL_VERBOSE,"httpReject");
 #endif
     HttpContext* c = reinterpret_cast<HttpContext*>(args[0].As<External>()->Value());
-    String::Utf8Value utf8(args[1]);
-    httpPrepareResponse(c, sdsnew("503 Service Unavailable"), sdsnewlen(*utf8, utf8.length()));
+    String::Utf8Value body(args[1]);
+    if(args[2].IsEmpty() || args[2]->IsUndefined()) {
+        httpPrepareResponse(c, sdsnew("503 Service Unavailable"), sdsnewlen(*body, body.length()));
+        httpResponseReady(c);
+        return;
+    }
+    String::Utf8Value status(args[2]);
+    httpPrepareResponse(c, sdsnewlen(*status, status.length()), sdsnewlen(*body, body.length()));
     httpResponseReady(c);
 }
 
@@ -294,12 +362,12 @@ void httpProcedureCall(HttpContext *c) {
         serverLog(LL_WARNING, "JS Runtime exception %s\n", *error);
         
         Local<Object> resp = Object::New(isolate);
-        resp->Set(context, String::NewFromUtf8(isolate, "Error", NewStringType::kNormal).ToLocalChecked(), trycatch.Exception());
+        resp->Set(context, String::NewFromUtf8(isolate, "Error", NewStringType::kNormal).ToLocalChecked(), trycatch.Exception()->ToString());
         resp->Set(context, String::NewFromUtf8(isolate, "Stack", NewStringType::kNormal).ToLocalChecked(), trycatch.StackTrace());
         
-        Local<Value> argv[] = {resp};
+        Local<Value> argv[] = {resp, Null(isolate), String::NewFromUtf8(isolate, "\t", NewStringType::kNormal).ToLocalChecked()};
         Local<Value> result;
-        Local<Function>::New(isolate, stringify)->Call(context, Local<Object>::New(isolate, ::JSON), 1, argv).ToLocal(&result);
+        Local<Function>::New(isolate, stringify)->Call(context, Local<Object>::New(isolate, ::JSON), 3, argv).ToLocal(&result);
         
         String::Utf8Value jsonStr(result);
         httpPrepareResponse(c, sdsnew("503 Service Unavailable"), sdsnewlen(*jsonStr, jsonStr.length()));
